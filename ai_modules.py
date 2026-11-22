@@ -277,8 +277,9 @@ class AIModule:
 
     def _process_yolo(self, frame: np.ndarray) -> list[dict]:
         detections = []
-        results = self.model(
+        results = self.model.track(
             frame,
+            persist=True,
             conf=self.confidence,
             classes=self.classes,
             verbose=False,
@@ -288,23 +289,26 @@ class AIModule:
             return detections
 
         boxes = results[0].boxes
-        for box in boxes:
+        for i, box in enumerate(boxes):
             x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
             conf = float(box.conf[0])
             cls_id = int(box.cls[0])
             label = COCO_NAMES[cls_id] if cls_id < len(COCO_NAMES) else f"class-{cls_id}"
+            track_id = int(box.id[0]) if box.id is not None else (i + 1)
             detections.append({
                 "label": label,
                 "confidence": round(conf, 3),
                 "bbox": [x1, y1, x2, y2],
                 "class_id": cls_id,
+                "track_id": track_id,
             })
         return detections
 
     def _process_yolo_pose(self, frame: np.ndarray) -> list[dict]:
         detections = []
-        results = self.model(
+        results = self.model.track(
             frame,
+            persist=True,
             conf=self.confidence,
             verbose=False,
             imgsz=416,
@@ -322,6 +326,7 @@ class AIModule:
         for i, box in enumerate(boxes):
             x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
             conf = float(box.conf[0])
+            track_id = int(box.id[0]) if box.id is not None else (i + 1)
 
             kp_list = []
             if keypoints_data is not None and i < len(keypoints_data.xy):
@@ -339,6 +344,7 @@ class AIModule:
                 "confidence": round(conf, 3),
                 "bbox": [x1, y1, x2, y2],
                 "class_id": 0,
+                "track_id": track_id,
                 "extra": {"keypoints": kp_list, "skeleton": POSE_SKELETON},
             })
         return detections

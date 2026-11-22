@@ -431,7 +431,7 @@ async def websocket_telemetry(websocket: WebSocket):
                 "auto_camera": vision_sys.auto_switch_enabled,
                 "locked_target_id": vision_sys.locked_target_id,
                 "targets": vision_sys.detected_targets,
-                "model_status": vision_sys.model_status,
+                "model_status": "READY" if any(m["enabled"] for m in ai_module_mgr.get_modules()) else "STANDBY",
                 "perf": {
                     "cam_fps": stream.stream_fps if stream else 0.0,
                     "out_fps": vision_sys.pipeline_fps,

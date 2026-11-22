@@ -341,6 +341,7 @@ class VisionSystem:
         self._loop_fps_t = time.time()
         self._frame_idx = 0
         self._last_cached_dets = []
+        self.ai_module_results = {}
 
         self.add_log(f"SISTEM BASLADI | CIHAZ: {self.compute_device}")
         if not torch.cuda.is_available():
@@ -700,6 +701,25 @@ class VisionSystem:
 
             self.detected_targets = current_targets
             self._evaluate_auto_camera_switch(frame, raw_boxes)
+
+            try:
+                from ai_modules import ai_module_mgr
+                ai_results = ai_module_mgr.process_frame(frame)
+                if ai_results:
+                    frame = ai_module_mgr.draw_results_on_frame(frame, ai_results)
+                    for mr in ai_results:
+                        mid = mr["module_id"]
+                        self.ai_module_results[mid] = {
+                            "count": len(mr["detections"]),
+                            "fps": round(self.pipeline_fps, 1),
+                            "infer_ms": round(self.infer_ms, 1),
+                        }
+                active_ids = [m.id for m in ai_module_mgr.modules.values() if m.enabled and m.model is not None]
+                for mid in list(self.ai_module_results.keys()):
+                    if mid not in active_ids:
+                        del self.ai_module_results[mid]
+            except Exception:
+                pass
 
             jq = int(cfg.data.get("stream_jpeg_quality", 68))
             _, jpeg = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, jq])

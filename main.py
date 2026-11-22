@@ -15,6 +15,7 @@ from config import cfg
 from mavlink_handler import MavlinkController
 from vision_engine import VisionSystem
 from cpdd_gimbal import cpdd_ctrl
+from ai_modules import ai_module_mgr
 
 app = FastAPI(title="INTERCO CPDD075 + 3D Cesium GCS")
 
@@ -143,6 +144,255 @@ async def api_dataset_folders():
     folders = await asyncio.to_thread(vision_sys.scan_dataset_folders)
     return {"folders": folders}
 
+# ── AI Modül API ──────────────────────────────────────────
+
+@app.get("/api/ai_modules")
+async def get_ai_modules():
+    return {"modules": ai_module_mgr.get_modules()}
+
+@app.post("/api/ai_modules/{module_id}/toggle")
+async def toggle_ai_module(module_id: str, payload: dict):
+    ok = ai_module_mgr.toggle_module(module_id, bool(payload.get("enabled", False)))
+    return {"ok": ok}
+
+@app.post("/api/ai_modules/{module_id}/config")
+async def set_ai_module_config(module_id: str, payload: dict):
+    if "confidence" in payload:
+        ai_module_mgr.set_confidence(module_id, float(payload["confidence"]))
+    return {"ok": True}
+
+@app.post("/api/ai_modules/{module_id}/download")
+async def download_ai_model(module_id: str):
+    ok = ai_module_mgr.download_model(module_id)
+    return {"ok": ok}
+
+@app.get("/api/ai_modules/{module_id}/download_status")
+async def get_download_status(module_id: str):
+    mod = ai_module_mgr.get_module(module_id)
+    if not mod:
+        return {"status": "error", "progress_pct": 0}
+    return {
+        "status": mod.download_status,
+        "progress_pct": round(mod.download_progress, 1),
+        "error": mod.download_error,
+    }
+
+@app.post("/api/ai_modules/{module_id}/delete_model")
+async def delete_ai_model(module_id: str):
+    mod = ai_module_mgr.get_module(module_id)
+    if not mod:
+        return {"ok": False}
+    mod.unload_model()
+    mod.enabled = False
+    from pathlib import Path
+    from ai_modules import MODELS_DIR, CUSTOM_MODELS_DIR
+    for d in [CUSTOM_MODELS_DIR, MODELS_DIR]:
+        p = d / mod.model_file
+        if p.exists():
+            try:
+                p.unlink()
+            except Exception:
+                pass
+    mod.download_status = "not_downloaded"
+    mod.download_progress = 0.0
+    ai_module_mgr._save_config()
+    return {"ok": True}
+
+@app.post("/api/ai_modules/custom")
+async def add_custom_module(payload: dict):
+    result = ai_module_mgr.add_custom_module(
+        name=payload.get("name", ""),
+        model_path_or_url=payload.get("model_url", ""),
+        description=payload.get("description", ""),
+    )
+    return result
+
+@app.delete("/api/ai_modules/custom/{module_id}")
+async def remove_custom_module(module_id: str):
+    ok = ai_module_mgr.remove_custom_module(module_id)
+    return {"ok": ok}
+
+# ── Klasör Yönetimi API ──────────────────────────────────
+
+@app.get("/api/folders")
+async def get_folders():
+    folders = cfg.data.get("folders", {})
+    return {"folders": folders}
+
+@app.post("/api/folders")
+async def create_folder(payload: dict):
+    name = payload.get("name", "").strip()
+    if not name:
+        return {"ok": False, "error": "Klasör adı gerekli"}
+    folders = cfg.data.setdefault("folders", {})
+    folder_id = "folder_" + name.lower().replace(" ", "_").replace("/", "_")[:20]
+    if folder_id in folders:
+        return {"ok": False, "error": "Bu isimde klasör zaten var"}
+    folders[folder_id] = {"name": name, "cameras": []}
+    cfg.save(cfg.data)
+    return {"ok": True, "folder_id": folder_id}
+
+@app.delete("/api/folders/{folder_id}")
+async def delete_folder(folder_id: str):
+    folders = cfg.data.get("folders", {})
+    if folder_id not in folders:
+        return {"ok": False, "error": "Klasör bulunamadı"}
+    del folders[folder_id]
+    cfg.save(cfg.data)
+    return {"ok": True}
+
+@app.post("/api/folders/{folder_id}/cameras")
+async def add_camera_to_folder(folder_id: str, payload: dict):
+    folders = cfg.data.get("folders", {})
+    if folder_id not in folders:
+        return {"ok": False, "error": "Klasör bulunamadı"}
+    cam_key = payload.get("camera_key", "")
+    if cam_key and cam_key not in folders[folder_id]["cameras"]:
+        folders[folder_id]["cameras"].append(cam_key)
+        cfg.save(cfg.data)
+    return {"ok": True}
+
+@app.delete("/api/folders/{folder_id}/cameras/{camera_key}")
+async def remove_camera_from_folder(folder_id: str, camera_key: str):
+    folders = cfg.data.get("folders", {})
+    if folder_id not in folders:
+        return {"ok": False}
+    if camera_key in folders[folder_id]["cameras"]:
+        folders[folder_id]["cameras"].remove(camera_key)
+        cfg.save(cfg.data)
+    return {"ok": True}
+
+# ── AI Profil Yönetimi API ────────────────────────────────
+
+PROFILES_DIR = os.path.join(os.path.dirname(__file__), "profiles")
+os.makedirs(PROFILES_DIR, exist_ok=True)
+
+@app.get("/api/ai_profiles")
+async def list_ai_profiles():
+    profiles = []
+    for f in sorted(os.listdir(PROFILES_DIR)):
+        if f.endswith(".json"):
+            profiles.append(f[:-5])
+    return {"profiles": profiles}
+
+@app.post("/api/ai_profiles/save")
+async def save_ai_profile(payload: dict):
+    import json as _json
+    name = payload.get("name", "").strip()
+    if not name:
+        return {"ok": False, "error": "Profil adı gerekli"}
+    safe_name = "".join(c if c.isalnum() or c in "-_ " else "" for c in name).strip()
+    if not safe_name:
+        return {"ok": False, "error": "Geçersiz profil adı"}
+    modules_state = ai_module_mgr.get_modules()
+    profile_data = {
+        "name": safe_name,
+        "modules": {m["id"]: {"confidence": m["confidence"], "enabled": m["enabled"]} for m in modules_state},
+    }
+    path = os.path.join(PROFILES_DIR, f"{safe_name}.json")
+    with open(path, "w", encoding="utf-8") as f:
+        _json.dump(profile_data, f, indent=2, ensure_ascii=False)
+    return {"ok": True, "profile": safe_name}
+
+@app.post("/api/ai_profiles/load")
+async def load_ai_profile(payload: dict):
+    import json as _json
+    name = payload.get("name", "").strip()
+    path = os.path.join(PROFILES_DIR, f"{name}.json")
+    if not os.path.isfile(path):
+        return {"ok": False, "error": "Profil bulunamadı"}
+    with open(path, "r", encoding="utf-8") as f:
+        profile = _json.load(f)
+    for mid, state in profile.get("modules", {}).items():
+        if "confidence" in state:
+            ai_module_mgr.set_confidence(mid, state["confidence"])
+        if "enabled" in state:
+            ai_module_mgr.toggle_module(mid, state["enabled"])
+    return {"ok": True, "applied": name}
+
+@app.delete("/api/ai_profiles/{profile_name}")
+async def delete_ai_profile(profile_name: str):
+    path = os.path.join(PROFILES_DIR, f"{profile_name}.json")
+    if os.path.isfile(path):
+        os.remove(path)
+        return {"ok": True}
+    return {"ok": False, "error": "Profil bulunamadı"}
+
+# ── Ayarlar API ───────────────────────────────────────────
+
+## ── AI Modülleri API ────────────────────────────────────────
+
+@app.get("/api/ai_modules")
+async def api_ai_modules():
+    return {"modules": ai_module_mgr.get_modules()}
+
+class AiToggleReq(BaseModel):
+    enabled: bool
+
+@app.post("/api/ai_modules/{module_id}/toggle")
+async def api_ai_toggle(module_id: str, req: AiToggleReq):
+    ok = ai_module_mgr.toggle_module(module_id, req.enabled)
+    return {"ok": ok}
+
+class AiConfReq(BaseModel):
+    confidence: float
+
+@app.post("/api/ai_modules/{module_id}/config")
+async def api_ai_config(module_id: str, req: AiConfReq):
+    ok = ai_module_mgr.set_confidence(module_id, req.confidence)
+    return {"ok": ok}
+
+@app.post("/api/ai_modules/{module_id}/download")
+async def api_ai_download(module_id: str):
+    ok = ai_module_mgr.download_model(module_id)
+    return {"ok": ok}
+
+@app.get("/api/ai_modules/{module_id}/download_status")
+async def api_ai_dl_status(module_id: str):
+    mod = ai_module_mgr.get_module(module_id)
+    if not mod:
+        return {"status": "unknown", "progress_pct": 0}
+    return {
+        "status": mod.download_status,
+        "progress_pct": round(mod.download_progress, 1),
+        "error": mod.download_error,
+    }
+
+@app.post("/api/ai_modules/{module_id}/delete_model")
+async def api_ai_delete_model(module_id: str):
+    mod = ai_module_mgr.get_module(module_id)
+    if not mod:
+        return {"ok": False}
+    mod.unload_model()
+    mod.enabled = False
+    path = mod._resolve_model_path()
+    if path and os.path.isfile(path) and "models" in path:
+        try:
+            os.remove(path)
+        except Exception:
+            pass
+    mod.download_status = "not_downloaded"
+    mod.download_progress = 0.0
+    return {"ok": True}
+
+class AiCustomReq(BaseModel):
+    name: str
+    model_url: str
+    model_type: str = "yolov8_detect"
+    default_confidence: float = 0.5
+
+@app.post("/api/ai_modules/custom")
+async def api_ai_add_custom(req: AiCustomReq):
+    result = ai_module_mgr.add_custom_module(req.name, req.model_url, "")
+    return result
+
+@app.delete("/api/ai_modules/custom/{module_id}")
+async def api_ai_remove_custom(module_id: str):
+    ok = ai_module_mgr.remove_custom_module(module_id)
+    return {"ok": ok}
+
+## ── Ayarlar API ─────────────────────────────────────────────
+
 @app.get("/api/settings")
 async def get_settings():
     return cfg.data
@@ -189,6 +439,15 @@ async def websocket_telemetry(websocket: WebSocket):
                     "device": vision_sys.compute_device,
                     "decoder": stream.decoder_type if stream else "NONE",
                     "res": f"{stream.frame.shape[1]}x{stream.frame.shape[0]}" if (stream and stream.frame is not None) else "-"
+                },
+                "ai_modules": {
+                    "active": [m["id"] for m in ai_module_mgr.get_modules() if m["enabled"]],
+                    "results": getattr(vision_sys, "ai_module_results", {}),
+                    "downloads": {
+                        m["id"]: {"status": m["download_status"], "pct": m["download_progress"]}
+                        for m in ai_module_mgr.get_modules()
+                        if m["download_status"] == "downloading"
+                    },
                 },
                 "logs": list(vision_sys.logs)[-18:],
                 "cpdd": {

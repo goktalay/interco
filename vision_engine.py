@@ -21,7 +21,7 @@ os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = (
     "analyzeduration;1000000|"
     "stimeout;3000000"
 )
-os.environ["OPENCV_FFMPEG_LOGLEVEL"] = "error"
+os.environ["OPENCV_FFMPEG_LOGLEVEL"] = "fatal"
 os.environ["OPENCV_VIDEOIO_PRIORITY_OBSENSOR"] = "0"
 os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"
 

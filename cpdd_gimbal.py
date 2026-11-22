@@ -155,36 +155,44 @@ class CPDD075Controller:
     def switch_view(self, mode: str):
         """Kamera görüntü kaynağını değiştirir.
 
-        Seri Protokol V2.14 - Komut 0x25 (Video display mode settings):
-            param 0x00 = Kızılötesi video 1  (THERMAL)
-            param 0x01 = Görünür ışık video 1 (WIDE)
-            param 0x02 = Görünür ışık video 2 (NARROW / tele)
-            param 0x03 = Kızılötesi video 2   (FUSION / EO+IR)
+        Üç yöntem paralel denenir:
+          1) Ham JSON (orijinal SDK uyumlu)
+          2) 44-byte binary frame (Seri Protokol V2.14, 0x25 komutu)
+          3) Metin komutu (bazı firmware'ler destekler)
+
+        JSON mode mapping (SDK/orijinal):
+            WIDE=0, THERMAL=1, NARROW=2, FUSION=3
+        Binary param mapping (Protokol V2.14):
+            0x00=IR1(THERMAL), 0x01=VIS1(WIDE), 0x02=VIS2(NARROW), 0x03=IR2(FUSION)
         """
         mode_u = mode.upper().strip()
         self.current_view = mode_u
 
+        # JSON mode numaraları (orijinal SDK sırasına göre)
+        json_mode_map = {"WIDE": 0, "THERMAL": 1, "NARROW": 2, "FUSION": 3}
+        # Binary param (Seri Protokol V2.14 - Komut 0x25)
+        bin_param_map = {"WIDE": "01", "THERMAL": "00", "NARROW": "02", "FUSION": "03"}
+
+        json_mode = json_mode_map.get(mode_u, 0)
+        bin_param = bin_param_map.get(mode_u, "00")
+
         if mode_u == "WIDE":
             self.zoom_level = 1.0
-            self.send_custom_hex("25", "01 00 00 00")
-            self.send_json_cmd({"cmd": "set_view", "mode": 1})
-            self.last_status = "NET UDP -> GENİŞ (VISIBLE-1)"
-
         elif mode_u == "NARROW":
             self.zoom_level = 4.0
-            self.send_custom_hex("25", "02 00 00 00")
-            self.send_json_cmd({"cmd": "set_view", "mode": 2})
-            self.last_status = "NET UDP -> DAR (TELE)"
 
-        elif mode_u == "THERMAL":
-            self.send_custom_hex("25", "00 00 00 00")
-            self.send_json_cmd({"cmd": "set_view", "mode": 0})
-            self.last_status = "NET UDP -> TERMAL (IR)"
+        target = self._get_target()
+        print(f"[CPDD] switch_view({mode_u}) -> JSON mode={json_mode}, BIN 0x25 param=0x{bin_param} -> {target[0]}:{target[1]}")
 
-        elif mode_u == "FUSION":
-            self.send_custom_hex("25", "03 00 00 00")
-            self.send_json_cmd({"cmd": "set_view", "mode": 3})
-            self.last_status = "NET UDP -> EO+IR (FUSION)"
+        # Yöntem 1: Ham JSON gönder (orijinal SDK uyumlu - en olası çalışan yöntem)
+        json_cmd = {"cmd": "set_view", "mode": json_mode}
+        json_bytes = json.dumps(json_cmd, separators=(",", ":")).encode("utf-8")
+        self.send_raw_bytes(json_bytes, wait_reply=False)
+
+        # Yöntem 2: 44-byte binary frame (Seri Protokol V2.14)
+        self.send_custom_hex("25", f"{bin_param} 00 00 00")
+
+        self.last_status = f"NET UDP -> {mode_u} (json:{json_mode} bin:0x{bin_param})"
 
     def zoom_step(self, direction: int):
         if direction > 0:

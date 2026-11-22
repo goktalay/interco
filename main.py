@@ -1,5 +1,7 @@
 import os
 # main.py
+import sys
+import signal
 import time
 import asyncio
 import webbrowser
@@ -201,10 +203,29 @@ async def websocket_telemetry(websocket: WebSocket):
     except WebSocketDisconnect:
         pass
 
+def _shutdown(signum=None, frame=None):
+    """CTRL+C ile temiz kapanış."""
+    print("\n[INTERCO] Kapatılıyor...")
+    vision_sys.running = False
+    vision_sys.main_stream.running = False
+    vision_sys.test_stream.running = False
+    mav_ctrl.running = False
+    # Kısa süre bekle ki thread'ler kapansın
+    time.sleep(0.3)
+    os._exit(0)
+
 if __name__ == "__main__":
+    # CTRL+C handler — Windows ve Linux'ta çalışır
+    signal.signal(signal.SIGINT, _shutdown)
+    signal.signal(signal.SIGTERM, _shutdown)
+
     port = int(cfg.data.get("web_port", 8005))
     host = cfg.data.get("web_host", "0.0.0.0")
     print(f"INTERCO CPDD075 GCS AKTIF -> http://{host}:{port}")
+    print(f"Kapatmak için CTRL+C basın")
     if os.environ.get("INTERCO_HEADLESS", "0") != "1":
         threading.Timer(1.0, lambda: webbrowser.open(f"http://localhost:{port}")).start()
-    uvicorn.run("main:app", host=host, port=port, reload=False)
+    try:
+        uvicorn.run("main:app", host=host, port=port, reload=False, log_level="warning")
+    except (KeyboardInterrupt, SystemExit):
+        _shutdown()

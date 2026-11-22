@@ -20,9 +20,23 @@ os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = (
     "analyzeduration;1000000|"
     "stimeout;3000000"
 )
-os.environ["OPENCV_FFMPEG_LOGLEVEL"] = "fatal"
+os.environ["OPENCV_FFMPEG_LOGLEVEL"] = "quiet"
+os.environ["OPENCV_LOG_LEVEL"] = "SILENT"
 os.environ["OPENCV_VIDEOIO_PRIORITY_OBSENSOR"] = "0"
 os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"
+
+if os.name == "nt":
+    import ctypes
+    try:
+        ctypes.CDLL("avutil-58").av_log_set_level(-8)
+    except Exception:
+        try:
+            ctypes.CDLL("avutil-57").av_log_set_level(-8)
+        except Exception:
+            try:
+                ctypes.CDLL("avutil-56").av_log_set_level(-8)
+            except Exception:
+                pass
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
 VIDEO_EXTS = {".mp4", ".avi", ".mkv", ".mov", ".ts", ".m4v"}

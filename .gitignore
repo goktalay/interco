@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+*.egg-info/
+dist/
+build/
+*.log
+video*/
+datasets/
+*.pt
+*.onnx
+*.engine
+.vscode/
+.idea/

@@ -348,7 +348,7 @@ class VisionSystem:
             self.add_log("UYARI: PyTorch CPU modunda! GPU hizlandirma icin Jetson CUDA wheel gerekli.")
 
         self.running = True
-        threading.Thread(target=self._load_model_async, daemon=True).start()
+        self.model_status = "STANDBY"
         threading.Thread(target=self._process_loop, daemon=True).start()
 
     def add_log(self, msg: str):
@@ -418,9 +418,6 @@ class VisionSystem:
         self.main_stream.trigger_reconnect()
         self.test_stream.trigger_reconnect()
         cpdd_ctrl.reload()
-        new_model = cfg.data.get("yolo_model", "yolov8n.pt")
-        if new_model != self.current_model_name:
-            threading.Thread(target=self._load_model_async, daemon=True).start()
 
     def test_cameras_and_model(self):
         rtsp_url = self.main_stream._get_source_url()

@@ -846,100 +846,302 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0;
+    width: 64px; z-index: 200;
+    background: rgba(6,10,8,0.92);
+    backdrop-filter: blur(14px);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 10px 0; gap: 2px;
+  }
+  .sb-logo {
+    color: var(--accent); font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; font-weight: 800; letter-spacing: 1px;
+    text-align: center; padding: 4px 4px 10px 4px;
+    border-bottom: 1px solid var(--border); width: 100%;
+    margin-bottom: 4px;
+  }
+  .sb-btn {
+    width: 50px; height: 50px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; cursor: pointer;
+    background: none; border: 1px solid transparent;
+    border-radius: var(--radius-lg); color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace; font-size: 8px; font-weight: 700;
+    letter-spacing: 0.3px; transition: all 0.15s;
+  }
+  .sb-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+  .sb-btn:hover { color: var(--accent); border-color: var(--accent-border); background: var(--accent-bg); }
+  .sb-btn.active { color: var(--accent); border-color: var(--accent-border); background: var(--accent-bg); }
+  .sb-sep { width: 36px; height: 1px; background: var(--border); margin: 6px 0; }
+  .sb-bottom { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+
+  /* ── DRAGGABLE PANELS ── */
+  .floating-panel {
+    position: fixed; z-index: 100;
+    background: var(--bg-panel);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    display: none; flex-direction: column;
+    min-width: 200px; min-height: 100px;
+    overflow: hidden;
+  }
+  .floating-panel.panel-open { display: flex; }
+  .panel-titlebar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 10px; background: rgba(0,0,0,0.3);
+    border-bottom: 1px solid var(--border);
+    cursor: move; user-select: none; flex-shrink: 0;
+  }
+  .panel-title {
+    color: var(--accent); font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 800; letter-spacing: 1px;
+  }
+  .panel-close {
+    background: none; border: none; color: var(--text-muted);
+    font-size: 14px; cursor: pointer; padding: 0 2px; line-height: 1;
+  }
+  .panel-close:hover { color: var(--red); }
+  .panel-body { flex: 1; overflow: auto; }
+  .resize-handle {
+    position: absolute; right: 0; bottom: 0;
+    width: 14px; height: 14px; cursor: se-resize;
+    background: linear-gradient(135deg, transparent 50%, var(--border) 50%);
+  }
+
+  /* ── CAMERA PANEL ── */
+  #panel-camera {
+    left: 74px; top: 10px;
+    width: calc(100vw - 84px); height: calc(100vh - 20px);
+  }
+  #panel-camera .panel-body {
+    position: relative; overflow: hidden;
+    flex: 1; min-height: 0;
+  }
+  #panel-camera #camera-stage {
+    position: absolute !important; inset: 0 !important;
+    width: 100% !important; height: 100% !important;
+    overflow: hidden;
+  }
+  #panel-camera #camera-stage #video-stream {
+    width: 100%; height: 100%; object-fit: contain; display: block;
+  }
+  #panel-camera #camera-stage #hud-canvas {
+    position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
+  }
+
+  /* ── MAP PANEL ── */
+  #panel-map {
+    left: 74px; top: 10px;
+    width: 500px; height: 380px;
+    display: none;
+  }
+
+  /* ── CONNECTION PANEL ── */
+  #panel-connection {
+    left: 74px; top: 10px;
+    width: 400px; min-height: 200px;
+  }
+  .conn-row { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid rgba(57,255,90,0.08); flex-wrap: wrap; }
+  .conn-label { color: var(--text-muted); font-size: 10px; font-weight: 600; min-width: 70px; }
+  .conn-val { color: var(--text-primary); font-size: 11px; font-family: 'JetBrains Mono', monospace; }
+
+  /* ── LOG PANEL ── */
+  #panel-log {
+    left: 74px; bottom: 10px;
+    width: 500px; max-height: 320px;
+  }
+  #panel-log #live-log-lines { max-height: 240px; overflow-y: auto; padding: 6px 10px; }
+  #panel-log #log-perf-summary { padding: 4px 12px; color: var(--text-muted); font-size: 10px; border-bottom: 1px solid var(--border); display: block; }
+
+  /* ── AI + SETTINGS PANELS (floating) ── */
+  #ai-modules-modal.floating-panel,
+  #settings-modal.floating-panel {
+    left: 74px; top: 10px;
+    width: 680px; max-height: calc(100vh - 20px);
+    overflow-y: auto;
+  }
+  #ai-modules-modal .modal-panel,
+  #settings-modal .modal-panel {
+    position: static; transform: none;
+    max-width: 100%; max-height: none;
+    border: none; box-shadow: none; background: none; padding: 0;
+  }
+  #ai-modules-modal.floating-panel .modal-top,
+  #settings-modal.floating-panel .modal-top {
+    display: none;
+  }
+
+  /* Override old modal overlay */
+  #takeoff-modal {
+    position: fixed; inset: 0; z-index: 300;
+    background: var(--bg-overlay);
+    display: none; align-items: center; justify-content: center;
+  }
 </style>
 </head>
 <body>
 
-  <div id="camera-stage" class="view-fullscreen" ondblclick="handleStageDoubleClick('camera')">
-    <div class="pip-badge" onclick="setLayoutMode(false)">
-      <span>KAMERA + HUD</span>
-      <button type="button" class="pip-expand-btn">BUYUT</button>
+  <!-- ═══ SIDEBAR ═══ -->
+  <nav id="sidebar">
+    <div class="sb-logo">INT<br>CO</div>
+    <button class="sb-btn active" id="sb-camera" onclick="togglePanel('camera')" title="Kamera">
+      <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="14" rx="2"/><circle cx="12" cy="13" r="4"/><path d="M8 6V4h8v2"/></svg>
+      KAMERA
+    </button>
+    <button class="sb-btn" id="sb-map" onclick="togglePanel('map')" title="Harita">
+      <svg viewBox="0 0 24 24"><polygon points="1,6 1,22 8,18 16,22 23,18 23,2 16,6 8,2"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+      HARİTA
+    </button>
+    <div class="sb-sep"></div>
+    <button class="sb-btn" id="sb-connection" onclick="togglePanel('connection')" title="Bağlantı">
+      <svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>
+      BAĞLANTI
+    </button>
+    <button class="sb-btn" id="sb-ai" onclick="openAiModules()" title="AI Modülleri">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/><circle cx="18" cy="18" r="3" fill="var(--bg-primary)" stroke="currentColor"/><path d="M17 18h2M18 17v2"/></svg>
+      AI
+    </button>
+    <button class="sb-btn" id="sb-settings" onclick="openSettings()" title="Ayarlar">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      AYARLAR
+    </button>
+    <div class="sb-bottom">
+      <button class="sb-btn" id="sb-log" onclick="togglePanel('log')" title="Log">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
+        LOG
+      </button>
+      <button class="sb-btn" id="btn-theme" onclick="toggleTheme()" title="Tema">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        TEMA
+      </button>
+      <button class="sb-btn" id="btn-fullscreen" onclick="toggleBrowserFullscreen()" title="Tam Ekran">
+        <svg viewBox="0 0 24 24"><polyline points="15,3 21,3 21,9"/><polyline points="9,21 3,21 3,15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+        EKRAN
+      </button>
     </div>
-    <img id="video-stream" src="/video_feed" alt="INTERCO EO/IR">
-    <canvas id="hud-canvas"></canvas>
-    <div id="no-signal-banner">NO VIDEO // <span id="ns-cam">WIDE</span></div>
-  </div>
+  </nav>
 
-  <div id="map-stage" class="view-pip" ondblclick="handleStageDoubleClick('map')">
-    <div class="pip-badge" onclick="setLayoutMode(true)">
-      <span>3D HARITA</span>
-      <button type="button" class="pip-expand-btn">BUYUT</button>
+  <!-- ═══ CAMERA PANEL ═══ -->
+  <div id="panel-camera" class="floating-panel panel-open">
+    <div class="panel-titlebar" id="panel-camera-titlebar">
+      <span class="panel-title">KAMERA // EO/IR HUD</span>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <div id="fps-indicator" style="font-size:9px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">FPS: --</div>
+        <div id="mav-indicator" class="hud-tag" style="font-size:9px;">LINK</div>
+        <div id="cam-indicator" class="hud-tag" style="font-size:9px;">AUTO</div>
+        <button class="panel-close" onclick="togglePanel('camera')">✕</button>
+      </div>
     </div>
-    <div id="cesium-container"></div>
-  </div>
-
-  <div class="cpdd-optics-bar" id="cpdd-optics-bar">
-    <button type="button" class="tac-btn" onclick="sendCpddCmd('ZOOM_IN')">ZOOM +</button>
-    <button type="button" class="tac-btn" onclick="sendCpddCmd('ZOOM_OUT')">ZOOM -</button>
-    <button type="button" class="tac-btn" onclick="sendCpddCmd('IR_PALETTE')">IR RENK</button>
-  </div>
-
-  <div id="live-log-drawer">
-    <div class="log-hdr">
-      <span id="log-perf-summary">DIAGNOSTICS // FPS & HARDWARE</span>
-      <button type="button" style="background:none;border:none;color:var(--red);font-weight:800;cursor:pointer;font-size:14px;" onclick="toggleLiveLogs()">✕</button>
+    <div class="panel-body" style="position:relative;">
+      <div id="camera-stage" class="view-fullscreen" style="position:absolute;inset:0;width:100%;height:100%;">
+        <img id="video-stream" src="/video_feed" alt="INTERCO EO/IR">
+        <canvas id="hud-canvas"></canvas>
+        <div id="no-signal-banner">NO VIDEO // <span id="ns-cam">WIDE</span></div>
+      </div>
+      <div id="targets-dock"></div>
     </div>
-    <div id="live-log-lines"></div>
-  </div>
-
-  <div class="top-bar">
-    <div class="sys-title">INTERCO</div>
-    <div class="top-status-group">
-      <div id="fps-indicator">FPS: -- / --</div>
-      <div id="mav-indicator" class="hud-tag">LINK: BEKLENIYOR</div>
-      <div id="cam-indicator" class="hud-tag">AUTO [WIDE]</div>
-      <button id="btn-toggle-logs" class="tac-btn" onclick="toggleLiveLogs()">LOG</button>
-      <button class="tac-btn" onclick="openAiModules()">AI MODULLERI</button>
-      <button class="tac-btn" onclick="openSettings()">AYARLAR</button>
-      <button class="theme-toggle-btn" id="btn-theme" onclick="toggleTheme()" title="Tema Degistir">🌙</button>
-      <button id="btn-fullscreen" class="tac-btn" title="Tam Ekran" onclick="toggleBrowserFullscreen()">TAM EKRAN</button>
-    </div>
-  </div>
-
-  <div id="targets-dock"></div>
-
-  <div class="bottom-bar">
-    <div class="sensor-group">
+    <!-- Sensor bar inside camera panel -->
+    <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-top:1px solid var(--border);flex-wrap:wrap;flex-shrink:0;">
       <button id="btn-AUTO" class="tac-btn active" onclick="setCamera('AUTO')">AUTO</button>
       <button id="btn-WIDE" class="tac-btn" onclick="setCamera('WIDE')">GENIS</button>
       <button id="btn-NARROW" class="tac-btn" onclick="setCamera('NARROW')">DAR</button>
       <button id="btn-THERMAL" class="tac-btn" onclick="setCamera('THERMAL')">TERMAL</button>
       <button id="btn-FUSION" class="tac-btn" onclick="setCamera('FUSION')">EO+IR</button>
       <button id="btn-WEBCAM" class="tac-btn webcam-btn" onclick="setCamera('WEBCAM')">TEST</button>
+      <div class="cpdd-optics-bar" id="cpdd-optics-bar" style="position:static;display:flex;gap:4px;margin-left:4px;">
+        <button type="button" class="tac-btn" onclick="sendCpddCmd('ZOOM_IN')">+</button>
+        <button type="button" class="tac-btn" onclick="sendCpddCmd('ZOOM_OUT')">-</button>
+        <button type="button" class="tac-btn" onclick="sendCpddCmd('IR_PALETTE')">IR</button>
+      </div>
     </div>
-
-    <div id="bottom-mode-display">MOD: STBY</div>
-
-    <div class="bottom-flight-group">
-      <button id="btn-abort-engagement" onclick="abortEngagement()">IPTAL</button>
-      <select id="flight-mode-select" class="mode-select" title="Ucus Modu" onchange="onFlightModeSelect(this.value)">
-        <option value="STBY">STBY</option>
-        <option value="STABILIZE">STABILIZE</option>
-        <option value="ALT_HOLD">ALT_HOLD</option>
-        <option value="LOITER">LOITER</option>
-        <option value="POSHOLD">POSHOLD</option>
-        <option value="GUIDED">GUIDED</option>
-        <option value="AUTO">AUTO</option>
-        <option value="AUTO-SCAN">AUTO-SCAN</option>
-        <option value="RTL">RTL</option>
-        <option value="LAND">LAND</option>
-        <option value="ACRO">ACRO</option>
-        <option value="SPORT">SPORT</option>
-        <option value="INTERCEPT" disabled>INTERCEPT</option>
-        <option value="TAKEOFF" disabled>TAKEOFF</option>
-        <option value="LANDED" disabled>LANDED</option>
-      </select>
-      <button id="btn-bottom-takeoff-land" class="tac-btn" style="border-color:var(--cyan); color:var(--cyan);" onclick="toggleTakeoffLand()">KALKIS</button>
-      <button class="tac-btn" style="border-color:var(--purple); color:var(--purple);" onclick="sendFlightCmd('RTL')">EVE DON</button>
-    </div>
+    <div class="resize-handle" id="resize-camera"></div>
   </div>
 
-  <!-- TAKEOFF MODAL -->
+  <!-- ═══ MAP PANEL ═══ -->
+  <div id="panel-map" class="floating-panel">
+    <div class="panel-titlebar" id="panel-map-titlebar">
+      <span class="panel-title">3D HARİTA // CESIUM</span>
+      <button class="panel-close" onclick="togglePanel('map')">✕</button>
+    </div>
+    <div class="panel-body" style="position:relative;min-height:300px;">
+      <div id="map-stage" style="position:absolute;inset:0;">
+        <div id="cesium-container" style="width:100%;height:100%;"></div>
+      </div>
+    </div>
+    <div class="resize-handle" id="resize-map"></div>
+  </div>
+
+  <!-- ═══ CONNECTION PANEL ═══ -->
+  <div id="panel-connection" class="floating-panel">
+    <div class="panel-titlebar" id="panel-connection-titlebar">
+      <span class="panel-title">BAĞLANTI // UÇUŞ KONTROLÜ</span>
+      <button class="panel-close" onclick="togglePanel('connection')">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="conn-row">
+        <span class="conn-label">BAĞLANTI</span>
+        <span id="mav-indicator-conn" class="conn-val">BEKLENIYOR</span>
+      </div>
+      <div class="conn-row">
+        <span class="conn-label">MOD</span>
+        <span id="bottom-mode-display" class="conn-val">MOD: STBY</span>
+      </div>
+      <div class="conn-row" style="gap:6px;flex-wrap:wrap;">
+        <span class="conn-label">UÇUŞ MODU</span>
+        <select id="flight-mode-select" class="mode-select" title="Ucus Modu" onchange="onFlightModeSelect(this.value)">
+          <option value="STBY">STBY</option>
+          <option value="STABILIZE">STABILIZE</option>
+          <option value="ALT_HOLD">ALT_HOLD</option>
+          <option value="LOITER">LOITER</option>
+          <option value="POSHOLD">POSHOLD</option>
+          <option value="GUIDED">GUIDED</option>
+          <option value="AUTO">AUTO</option>
+          <option value="AUTO-SCAN">AUTO-SCAN</option>
+          <option value="RTL">RTL</option>
+          <option value="LAND">LAND</option>
+          <option value="ACRO">ACRO</option>
+          <option value="SPORT">SPORT</option>
+          <option value="INTERCEPT" disabled>INTERCEPT</option>
+          <option value="TAKEOFF" disabled>TAKEOFF</option>
+          <option value="LANDED" disabled>LANDED</option>
+        </select>
+      </div>
+      <div class="conn-row" style="gap:6px;flex-wrap:wrap;padding:10px;">
+        <button id="btn-bottom-takeoff-land" class="tac-btn" style="border-color:var(--cyan); color:var(--cyan);" onclick="toggleTakeoffLand()">KALKIŞ</button>
+        <button class="tac-btn" style="border-color:var(--purple); color:var(--purple);" onclick="sendFlightCmd('RTL')">EVE DÖN</button>
+        <button id="btn-abort-engagement" onclick="abortEngagement()" style="display:none;">İPTAL</button>
+      </div>
+    </div>
+    <div class="resize-handle" id="resize-connection"></div>
+  </div>
+
+  <!-- ═══ LOG PANEL ═══ -->
+  <div id="panel-log" class="floating-panel">
+    <div class="panel-titlebar" id="panel-log-titlebar">
+      <span class="panel-title">LOG // TANI</span>
+      <button class="panel-close" onclick="togglePanel('log')">✕</button>
+    </div>
+    <div class="panel-body">
+      <div id="live-log-drawer" style="display:block;position:static;border:none;background:none;padding:0;">
+        <span id="log-perf-summary" style="display:block;padding:4px 12px;color:var(--text-muted);font-size:10px;border-bottom:1px solid var(--border);">DIAGNOSTICS // FPS & HARDWARE</span>
+        <div id="live-log-lines"></div>
+      </div>
+    </div>
+    <div class="resize-handle" id="resize-log"></div>
+  </div>
+
+  <!-- ═══ TAKEOFF MODAL ═══ -->
   <div id="takeoff-modal">
     <div class="takeoff-box">
-      <h3>KALKIS IRTIFASI ONAYI</h3>
+      <h3>KALKIŞ İRTİFASI ONAYI</h3>
       <div class="fld">
-        <label>Hedef Irtifa (Metre)</label>
+        <label>Hedef İrtifa (Metre)</label>
         <input type="number" id="takeoff-alt-input" value="50" min="5" max="1000" step="5">
       </div>
       <div class="takeoff-presets">
@@ -949,37 +1151,38 @@
         <button type="button" class="tac-btn" onclick="setTakeoffPreset(150)">150m</button>
       </div>
       <div class="modal-footer" style="border:none;padding:12px 0 0 0;background:none;">
-        <button type="button" class="tac-btn" onclick="closeTakeoffModal()">IPTAL</button>
+        <button type="button" class="tac-btn" onclick="closeTakeoffModal()">İPTAL</button>
         <button type="button" class="tac-btn" style="background:var(--cyan); color:var(--bg-primary); border-color:var(--cyan);" onclick="confirmTakeoff()">ONAYLA</button>
       </div>
     </div>
   </div>
 
-  <!-- SETTINGS MODAL (TABBED) -->
-  <div id="settings-modal">
+  <!-- ═══ SETTINGS MODAL (FLOATING PANEL) ═══ -->
+  <div id="settings-modal" class="floating-panel">
+    <div class="panel-titlebar" id="panel-settings-titlebar">
+      <span class="panel-title">INTERCO // SİSTEM AYARLARI</span>
+      <button class="panel-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="panel-body">
     <div class="modal-panel">
-      <div class="modal-top">
-        <h2>INTERCO // SISTEM AYARLARI</h2>
-        <button class="tac-btn" onclick="closeSettings()">KAPAT</button>
-      </div>
+      <div class="modal-top" style="display:none;"></div>
 
       <div class="settings-tabs" id="settings-tabs">
-        <button class="settings-tab active" data-tab="tab-drone" onclick="switchSettingsTab('tab-drone')">DRON BAGLANTISI</button>
-        <button class="settings-tab" data-tab="tab-camera" onclick="switchSettingsTab('tab-camera')">KAMERA MODELI</button>
-        <button class="settings-tab" data-tab="tab-test" onclick="switchSettingsTab('tab-test')">TEST KAYNAGI</button>
-        <button class="settings-tab" data-tab="tab-pid" onclick="switchSettingsTab('tab-pid')">PID GUDUM</button>
+        <button class="settings-tab active" data-tab="tab-drone" onclick="switchSettingsTab('tab-drone')">DRON BAĞLANTISI</button>
+        <button class="settings-tab" data-tab="tab-camera" onclick="switchSettingsTab('tab-camera')">KAMERA MODELİ</button>
+        <button class="settings-tab" data-tab="tab-test" onclick="switchSettingsTab('tab-test')">TEST KAYNAĞI</button>
+        <button class="settings-tab" data-tab="tab-pid" onclick="switchSettingsTab('tab-pid')">PID GÜDÜM</button>
       </div>
 
-      <!-- TAB 1: DRON BAGLANTISI -->
       <div class="settings-tab-content active" id="tab-drone">
-        <div class="sec-hdr">TELEMETRI BAGLANTISI</div>
+        <div class="sec-hdr">TELEMETRİ BAĞLANTISI</div>
         <div class="form-grid-3">
           <div class="fld">
             <label>Protokol</label>
             <select id="cfg-tel-proto" onchange="onProtocolChange()">
-              <option value="SITL">SITL (Dahili Simulator)</option>
+              <option value="SITL">SITL (Dahili Simülatör)</option>
               <option value="UDP">UDP (TAISYNC Dinle)</option>
-              <option value="TCP">TCP Client (Drona Baglan)</option>
+              <option value="TCP">TCP Client (Drona Bağlan)</option>
               <option value="TCPIN">TCP Server (Dinle)</option>
             </select>
           </div>
@@ -994,14 +1197,13 @@
         </div>
       </div>
 
-      <!-- TAB 2: KAMERA MODELI -->
       <div class="settings-tab-content" id="tab-camera">
-        <div class="sec-hdr">CPDD075CCT - Uclu AI Takip Modulu</div>
+        <div class="sec-hdr">CPDD075CCT - Üçlü AI Takip Modülü</div>
         <div class="form-grid-3">
           <div class="fld">
             <label>Kamera / Gimbal IP</label>
             <input type="text" id="cfg-cpdd-ip" value="192.168.144.108" oninput="onCpddIpInput()">
-            <small>Fabrika varsayilani: 192.168.144.108</small>
+            <small>Fabrika varsayılanı: 192.168.144.108</small>
           </div>
           <div class="fld">
             <label>UDP Port / Local Port</label>
@@ -1012,15 +1214,14 @@
             <small>Server: 9554 | Local: 7002</small>
           </div>
           <div class="fld">
-            <label>Kamera Tilt Acisi (°)</label>
+            <label>Kamera Tilt Açısı (°)</label>
             <input type="number" step="1" min="-90" max="90" id="cfg-cam-tilt" value="30">
-            <small>Varsayilan: +30°</small>
+            <small>Varsayılan: +30°</small>
           </div>
         </div>
-
         <div class="form-grid" style="margin-top:10px;">
           <div class="fld">
-            <label>Stream Protokolu</label>
+            <label>Stream Protokolü</label>
             <select id="cfg-stream-proto">
               <option value="RTSP">RTSP (Real Time Streaming)</option>
               <option value="RTP">RTP (Real-time Transport)</option>
@@ -1028,56 +1229,54 @@
             </select>
           </div>
           <div class="fld">
-            <label>Video Akis Adresi</label>
+            <label>Video Akış Adresi</label>
             <input type="text" id="cfg-cpdd-rtsp" value="rtsp://192.168.144.108/live/0">
-            <small>Tekil akis: Genis/Dar/Termal gecisleri UDP ile yapilir</small>
+            <small>Tekil akış: Geniş/Dar/Termal geçişleri UDP ile yapılır</small>
           </div>
           <div class="fld">
-            <label>Dikey Gorus Acisi / vFOV (°)</label>
+            <label>Dikey Görüş Açısı / vFOV (°)</label>
             <input type="number" step="1" min="20" max="140" id="cfg-cam-vfov" value="60">
-            <small>Ufuk cizgisi kompanzasyonu (Varsayilan: 60°)</small>
+            <small>Ufuk çizgisi kompanzasyonu (Varsayılan: 60°)</small>
           </div>
           <div class="fld">
             <label>Bing Maps API Key</label>
-            <input type="text" id="cfg-bing-key" placeholder="Bossa otomatik Bing Uydu acilir">
+            <input type="text" id="cfg-bing-key" placeholder="Bossa otomatik Bing Uydu açılır">
           </div>
         </div>
-
-        <div class="sec-hdr" style="margin-top:14px;">CIHAZ KOMUT TESTI</div>
+        <div class="sec-hdr" style="margin-top:14px;">CİHAZ KOMUT TESTİ</div>
         <div class="form-grid">
           <div class="fld">
-            <label>UDP Metin Komutu (Kilavuz Madde 29)</label>
+            <label>UDP Metin Komutu (Kılavuz Madde 29)</label>
             <div class="input-with-btn">
               <input type="text" id="cfg-cpdd-text-cmd" value="sh:ifconfig" placeholder="sh:ifconfig">
-              <button type="button" class="tac-btn" onclick="sendCpddRawText()">GONDER</button>
+              <button type="button" class="tac-btn" onclick="sendCpddRawText()">GÖNDER</button>
             </div>
             <small id="cpdd-raw-reply">Cihaz IP sorgusu: sh:ifconfig (UDP 9554)</small>
           </div>
           <div class="fld">
-            <label>Hex Komutu (Kilavuz Madde 28 - Type B / CD)</label>
+            <label>Hex Komutu (Kılavuz Madde 28 - Type B / CD)</label>
             <div class="input-with-btn">
               <input type="text" id="cfg-cpdd-hex-b" value="2F" style="width:65px;" title="Type B">
               <input type="text" id="cfg-cpdd-hex-cd" value="01 00 00 00" title="Type CD">
               <button type="button" class="tac-btn" onclick="sendCpddRawHex()">HEX AT</button>
             </div>
-            <small>2F: Gorunum (01:Genis, 02:Dar, 03:Termal) | 45: Zoom</small>
+            <small>2F: Görünüm (01:Geniş, 02:Dar, 03:Termal) | 45: Zoom</small>
           </div>
         </div>
       </div>
 
-      <!-- TAB 3: TEST KAYNAGI -->
       <div class="settings-tab-content" id="tab-test">
-        <div class="sec-hdr">TEST VIDEO KAYNAGI</div>
+        <div class="sec-hdr">TEST VİDEO KAYNAĞI</div>
         <div class="form-grid">
           <div class="fld">
             <label>Kaynak Tipi</label>
             <select id="cfg-test-type" onchange="onTestTypeChange()">
-              <option value="WEBCAM">Web Kamerasi (0, 1)</option>
-              <option value="CUSTOM">Video Dosyasi / RTSP URL</option>
+              <option value="WEBCAM">Web Kamerası (0, 1)</option>
+              <option value="CUSTOM">Video Dosyası / RTSP URL</option>
             </select>
           </div>
           <div class="fld" id="box-custom-source">
-            <label id="lbl-custom-source">Kamera Indeksi</label>
+            <label id="lbl-custom-source">Kamera İndeksi</label>
             <div class="input-with-btn">
               <input type="text" id="cfg-cam-webcam" placeholder="0">
               <button type="button" id="btn-scan-cam" class="tac-btn" onclick="scanWebcams()">TARA</button>
@@ -1086,12 +1285,11 @@
         </div>
       </div>
 
-      <!-- TAB 4: PID GUDUM -->
       <div class="settings-tab-content" id="tab-pid">
-        <div class="sec-hdr">PID GUDUM PARAMETRELERI</div>
+        <div class="sec-hdr">PID GÜDÜM PARAMETRELERİ</div>
         <div class="form-grid-3">
           <div class="fld">
-            <label>Saldiri Itkisi (0.1 - 1.0)</label>
+            <label>Saldırı İtkisi (0.1 - 1.0)</label>
             <input type="number" step="0.1" min="0.1" max="1.0" id="cfg-thrust">
           </div>
           <div class="fld">
@@ -1108,13 +1306,86 @@
       <div id="test-report"></div>
 
       <div class="modal-footer">
-        <button class="tac-btn" onclick="closeSettings()">IPTAL</button>
+        <button class="tac-btn" onclick="closeSettings()">İPTAL</button>
         <button id="btn-save-test" class="tac-btn active" onclick="saveAndTest()">KAYDET VE TEST ET</button>
       </div>
     </div>
+    </div>
+    <div class="resize-handle" id="resize-settings"></div>
   </div>
 
+
 <script>
+  /* ===== PANEL SYSTEM ===== */
+  const panelIds = { camera: 'panel-camera', map: 'panel-map', connection: 'panel-connection', log: 'panel-log' };
+  const sbIds = { camera: 'sb-camera', map: 'sb-map', connection: 'sb-connection', log: 'sb-log' };
+
+  function togglePanel(name) {
+    const panel = document.getElementById(panelIds[name]);
+    const sb = document.getElementById(sbIds[name]);
+    if (!panel) return;
+    const open = panel.classList.toggle('panel-open');
+    if (sb) sb.classList.toggle('active', open);
+    if (open && name === 'map') {
+      setTimeout(() => { if (cesiumViewer) { cesiumViewer.resize(); cesiumViewer.scene.requestRender(); } }, 80);
+    }
+    if (open && name === 'camera') {
+      setTimeout(() => { resizeHudCanvas(); }, 80);
+    }
+  }
+
+  function makeDraggable(panel, handle) {
+    let startX, startY, startLeft, startTop;
+    handle.addEventListener('mousedown', e => {
+      if (e.target.closest('.panel-close')) return;
+      startX = e.clientX; startY = e.clientY;
+      const r = panel.getBoundingClientRect();
+      startLeft = r.left; startTop = r.top;
+      panel.style.left = startLeft + 'px'; panel.style.top = startTop + 'px';
+      panel.style.right = 'auto'; panel.style.bottom = 'auto';
+      function onMove(e2) {
+        panel.style.left = (startLeft + e2.clientX - startX) + 'px';
+        panel.style.top = (startTop + e2.clientY - startY) + 'px';
+      }
+      function onUp() { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+
+  function makeResizable(panel, handle) {
+    handle.addEventListener('mousedown', e => {
+      e.preventDefault();
+      const startW = panel.offsetWidth, startH = panel.offsetHeight;
+      const startX = e.clientX, startY = e.clientY;
+      function onMove(e2) {
+        panel.style.width = Math.max(200, startW + e2.clientX - startX) + 'px';
+        panel.style.height = Math.max(100, startH + e2.clientY - startY) + 'px';
+        if (panel.id === 'panel-camera') { resizeHudCanvas(); }
+        if (panel.id === 'panel-map' && cesiumViewer) { cesiumViewer.resize(); }
+      }
+      function onUp() { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    [['panel-camera','panel-camera-titlebar','resize-camera'],
+     ['panel-map','panel-map-titlebar','resize-map'],
+     ['panel-connection','panel-connection-titlebar','resize-connection'],
+     ['panel-log','panel-log-titlebar','resize-log'],
+     ['settings-modal','panel-settings-titlebar','resize-settings'],
+     ['ai-modules-modal','panel-ai-titlebar','resize-ai']
+    ].forEach(([pid, hid, rid]) => {
+      const p = document.getElementById(pid);
+      const h = document.getElementById(hid);
+      const r = document.getElementById(rid);
+      if (p && h) makeDraggable(p, h);
+      if (p && r) makeResizable(p, r);
+    });
+  });
+
   /* ===== THEME ===== */
   function toggleTheme() {
     const html = document.documentElement;
@@ -1185,11 +1456,8 @@
 
   let logsVisible = false;
   function toggleLiveLogs() {
+    togglePanel('log');
     logsVisible = !logsVisible;
-    const drawer = document.getElementById("live-log-drawer");
-    const btn = document.getElementById("btn-toggle-logs");
-    if (drawer) drawer.style.display = logsVisible ? "block" : "none";
-    if (btn) btn.classList.toggle("active", logsVisible);
   }
 
   function toggleBrowserFullscreen() {
@@ -1223,17 +1491,8 @@
 
   function setLayoutMode(mapFull) {
     isMapFullscreen = mapFull;
-    const camStage = document.getElementById("camera-stage");
-    const mapStage = document.getElementById("map-stage");
-    const optBar = document.getElementById("cpdd-optics-bar");
-    if (isMapFullscreen) {
-      mapStage.className = "view-fullscreen";
-      camStage.className = "view-pip";
-      if (optBar) optBar.style.display = "none";
-    } else {
-      camStage.className = "view-fullscreen";
-      mapStage.className = "view-pip";
-      if (optBar) optBar.style.display = "flex";
+    if (mapFull) {
+      togglePanel('map');
     }
     setTimeout(() => {
       resizeHudCanvas();
@@ -1242,8 +1501,7 @@
   }
 
   function handleStageDoubleClick(stageName) {
-    if (stageName === "map" && !isMapFullscreen) setLayoutMode(true);
-    else if (stageName === "camera" && isMapFullscreen) setLayoutMode(false);
+    if (stageName === "map") togglePanel('map');
   }
 
   /* ===== CESIUM 3D MAP ===== */
@@ -1928,10 +2186,18 @@
     document.getElementById("cfg-yaw-gain").value = s.yaw_rate_gain || 1.8;
     document.getElementById("cfg-pitch-gain").value = s.pitch_rate_gain || 1.5;
 
-    document.getElementById("settings-modal").style.display = "flex";
+    const m = document.getElementById("settings-modal");
+    m.classList.add("panel-open");
+    m.style.display = "flex";
+    document.getElementById("sb-settings")?.classList.add("active");
   }
 
-  function closeSettings() { document.getElementById("settings-modal").style.display = "none"; }
+  function closeSettings() {
+    const m = document.getElementById("settings-modal");
+    m.classList.remove("panel-open");
+    m.style.display = "none";
+    document.getElementById("sb-settings")?.classList.remove("active");
+  }
 
   async function saveAndTest() {
     const btn = document.getElementById("btn-save-test");
@@ -2002,10 +2268,15 @@
   }
 </script>
 
-<!-- AI MODULES MODAL -->
-<div id="ai-modules-modal">
+<!-- AI MODULES MODAL (floating panel) -->
+<div id="ai-modules-modal" class="floating-panel">
+  <div class="panel-titlebar" id="panel-ai-titlebar">
+    <span class="panel-title">INTERCO // GÖRÜNTÜ İŞLEME MODÜLLERİ</span>
+    <button class="panel-close" onclick="closeAiModules()">✕</button>
+  </div>
+  <div class="panel-body">
   <div class="ai-modal-panel">
-    <div class="modal-top">
+    <div class="modal-top" style="display:none;">
       <h2>INTERCO // GORUNTU ISLEME MODULLERI</h2>
       <button class="tac-btn" onclick="closeAiModules()">KAPAT</button>
     </div>
@@ -2051,6 +2322,8 @@
       <div style="font-size:10px; color:var(--text-muted); padding:8px; grid-column:1/-1;">Henuz klasor eklenmedi</div>
     </div>
   </div>
+  </div><!-- /panel-body -->
+  <div class="resize-handle" id="resize-ai"></div>
 </div>
 
 <script>
@@ -2071,10 +2344,18 @@ let aiDownloadPollers = {};
 let aiModuleResults = {};
 
 function openAiModules() {
-  document.getElementById("ai-modules-modal").style.display = "flex";
+  const m = document.getElementById("ai-modules-modal");
+  m.classList.add("panel-open");
+  m.style.display = "flex";
+  document.getElementById("sb-ai")?.classList.add("active");
   loadAiModules(); loadFolders(); loadAiProfiles();
 }
-function closeAiModules() { document.getElementById("ai-modules-modal").style.display = "none"; }
+function closeAiModules() {
+  const m = document.getElementById("ai-modules-modal");
+  m.classList.remove("panel-open");
+  m.style.display = "none";
+  document.getElementById("sb-ai")?.classList.remove("active");
+}
 
 async function loadAiModules() {
   try { const res = await fetch("/api/ai_modules"); const data = await res.json(); aiModulesCache = data.modules || []; renderAiModules(); } catch (e) { console.error("AI modules load error:", e); }

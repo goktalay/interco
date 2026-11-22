@@ -491,6 +491,107 @@
     padding-top: 10px;
     border-top: 1px solid var(--border-subtle);
   }
+
+  /* ── AI MODULES PANEL ── */
+  #ai-modules-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 5, 4, 0.88);
+    z-index: 46;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 24px;
+    backdrop-filter: blur(4px);
+    overflow-y: auto;
+  }
+  .ai-modal-panel {
+    width: 96vw;
+    max-width: 860px;
+    max-height: 92vh;
+    overflow-y: auto;
+    background: #070d0b;
+    border: 1px solid var(--hud-green);
+    padding: 14px;
+    margin-bottom: 24px;
+  }
+  .ai-modules-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  @media (max-width: 700px) { .ai-modules-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 460px) { .ai-modules-grid { grid-template-columns: 1fr; } }
+  .ai-module-card {
+    background: rgba(4, 12, 7, 0.92);
+    border: 1px solid var(--border-subtle);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .ai-module-card.active { border-color: var(--hud-green); box-shadow: 0 0 8px rgba(57, 255, 90, 0.25); }
+  .ai-module-card.downloading { border-color: var(--hud-cyan); }
+  .ai-module-card.error { border-color: var(--hud-red); }
+  .ai-card-header { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .ai-card-name { font-size: 11px; font-weight: 800; letter-spacing: 0.6px; color: #fff; display: flex; align-items: center; gap: 5px; }
+  .ai-toggle { position: relative; width: 36px; height: 18px; flex-shrink: 0; }
+  .ai-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .ai-toggle-track { position: absolute; inset: 0; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); cursor: pointer; transition: background 0.2s; }
+  .ai-toggle input:checked + .ai-toggle-track { background: rgba(57, 255, 90, 0.3); border-color: var(--hud-green); }
+  .ai-toggle-track::after { content: ""; position: absolute; left: 2px; top: 2px; width: 12px; height: 12px; background: rgba(255,255,255,0.4); transition: transform 0.2s, background 0.2s; }
+  .ai-toggle input:checked + .ai-toggle-track::after { transform: translateX(16px); background: var(--hud-green); }
+  .ai-toggle input:disabled + .ai-toggle-track { opacity: 0.35; cursor: not-allowed; }
+  .ai-status { font-size: 9px; font-weight: 700; letter-spacing: 0.5px; padding: 2px 6px; display: inline-block; }
+  .ai-status.st-none { color: rgba(210,235,220,0.5); border: 1px solid rgba(210,235,220,0.2); }
+  .ai-status.st-downloading { color: var(--hud-cyan); border: 1px solid rgba(56, 189, 248, 0.4); }
+  .ai-status.st-ready { color: var(--hud-amber); border: 1px solid rgba(255, 170, 0, 0.4); }
+  .ai-status.st-active { color: var(--hud-green); border: 1px solid rgba(57, 255, 90, 0.4); text-shadow: var(--hud-glow); }
+  .ai-status.st-error { color: var(--hud-red); border: 1px solid rgba(255, 46, 46, 0.4); }
+  .ai-status.st-needs-install { color: #c084fc; border: 1px solid rgba(192, 132, 252, 0.4); }
+  .ai-dl-btn { background: rgba(56, 189, 248, 0.15); border: 1px solid var(--hud-cyan); color: var(--hud-cyan); font-family: var(--font-hud); font-size: 9px; font-weight: 800; letter-spacing: 0.5px; padding: 3px 8px; cursor: pointer; white-space: nowrap; }
+  .ai-dl-btn:hover { background: rgba(56, 189, 248, 0.3); }
+  .ai-dl-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .ai-dl-btn.del-btn { background: rgba(255, 46, 46, 0.1); border-color: var(--hud-red); color: var(--hud-red); }
+  .ai-dl-btn.del-btn:hover { background: rgba(255, 46, 46, 0.25); }
+  .ai-progress-bar { flex: 1; height: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(56, 189, 248, 0.3); position: relative; overflow: hidden; display: none; }
+  .ai-progress-bar.visible { display: block; }
+  .ai-progress-fill { height: 100%; background: linear-gradient(90deg, rgba(56, 189, 248, 0.5), var(--hud-cyan)); width: 0%; transition: width 0.3s; }
+  .ai-progress-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 800; color: #fff; letter-spacing: 0.5px; }
+  .ai-slider-row { display: flex; align-items: center; gap: 6px; }
+  .ai-slider-label { font-size: 9px; color: rgba(210,235,220,0.7); white-space: nowrap; min-width: 82px; }
+  .ai-slider { -webkit-appearance: none; appearance: none; flex: 1; height: 4px; background: rgba(57, 255, 90, 0.15); border: none; outline: none; }
+  .ai-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; background: var(--hud-green); border: 2px solid #040705; cursor: pointer; }
+  .ai-slider:disabled { opacity: 0.3; }
+  .ai-results-badge { font-size: 9px; font-weight: 700; color: rgba(57, 255, 90, 0.6); letter-spacing: 0.4px; text-align: right; }
+  .ai-results-badge.has-results { color: var(--hud-green); text-shadow: var(--hud-glow); }
+  .ai-custom-form { display: none; background: rgba(4, 12, 7, 0.92); border: 1px solid var(--hud-cyan); padding: 10px; margin-top: 8px; }
+  .ai-custom-form.visible { display: block; }
+  .ai-results-panel { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; }
+  .ai-result-stat { background: rgba(4, 12, 7, 0.88); border: 1px solid var(--border-subtle); padding: 6px 8px; font-size: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .ai-result-stat .stat-name { font-weight: 700; color: var(--hud-green); }
+  .ai-result-stat .stat-vals { color: var(--hud-cyan); font-weight: 600; letter-spacing: 0.3px; }
+
+  /* --- PROFILE MANAGEMENT --- */
+  .profile-item { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: rgba(4, 12, 7, 0.88); border: 1px solid var(--border-subtle); }
+  .profile-name { flex: 1; font-size: 11px; font-weight: 700; color: var(--hud-amber); letter-spacing: 0.4px; }
+  .profile-save-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .profile-save-row input { flex: 1; height: 28px; background: #0a1210; border: 1px solid var(--border-subtle); color: var(--hud-green); font-family: var(--font-hud); font-size: 11px; padding: 0 8px; }
+  #profile-list { display: flex; flex-direction: column; gap: 4px; }
+
+  /* --- FOLDER MANAGEMENT --- */
+  .folders-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  @media (max-width: 600px) { .folders-grid { grid-template-columns: 1fr; } }
+  .folder-card { background: rgba(4, 12, 7, 0.92); border: 1px solid var(--border-subtle); padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .folder-header { display: flex; align-items: center; justify-content: space-between; }
+  .folder-name { font-size: 12px; font-weight: 800; color: var(--hud-amber); letter-spacing: 0.6px; }
+  .folder-cameras { display: flex; flex-wrap: wrap; gap: 4px; min-height: 22px; }
+  .folder-cam-tag { display: inline-flex; align-items: center; gap: 3px; background: rgba(57, 255, 90, 0.1); border: 1px solid rgba(57, 255, 90, 0.3); color: var(--hud-green); font-size: 9px; font-weight: 700; padding: 2px 6px; letter-spacing: 0.4px; }
+  .folder-cam-remove { background: none; border: none; color: var(--hud-red); font-size: 11px; cursor: pointer; padding: 0 1px; font-weight: 900; }
+  .folder-cam-remove:hover { color: #ff6b63; }
+  .folder-add-cam { display: flex; align-items: center; gap: 4px; }
+  .folder-create-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .folder-create-row input { flex: 1; height: 28px; background: #0a1210; border: 1px solid var(--border-subtle); color: var(--hud-green); font-family: var(--font-hud); font-size: 11px; padding: 0 8px; }
 </style>
 </head>
 <body>
@@ -1393,6 +1494,8 @@
       }
     }
 
+    if (data.ai_modules) { updateAiResultsPanel(data.ai_modules); }
+
     const bottomModeEl = document.getElementById("bottom-mode-display");
     if (hudState.engaged) {
       const engText = `INTERCEPT // TD-${String(data.locked_target_id).padStart(2, "0")}`;
@@ -2124,6 +2227,216 @@
       btn.disabled = false;
     }
   }
+</script>
+
+<!-- AI MODULES MODAL -->
+<div id="ai-modules-modal">
+  <div class="ai-modal-panel">
+    <div class="modal-top">
+      <h2>INTERCO // GORUNTU ISLEME MODULLERI</h2>
+      <button class="tac-btn" onclick="closeAiModules()">KAPAT [X]</button>
+    </div>
+    <div class="sec-hdr">01 // HAZIR MODULLER</div>
+    <div class="ai-modules-grid" id="ai-builtin-grid"></div>
+    <div class="sec-hdr" style="margin-top:14px;">02 // KULLANICI MODELLERI</div>
+    <div class="ai-modules-grid" id="ai-custom-grid"></div>
+    <div style="margin-top:8px;">
+      <button class="tac-btn" id="btn-show-custom-form" onclick="toggleCustomModelForm()">+ OZEL MODEL EKLE</button>
+    </div>
+    <div class="ai-custom-form" id="ai-custom-form">
+      <div class="form-grid">
+        <div class="fld"><label>Model Adi</label><input type="text" id="ai-custom-name" placeholder="Silah Tanima"></div>
+        <div class="fld"><label>Model URL / Dosya Yolu</label><input type="text" id="ai-custom-url" placeholder="https://... veya /path/to/model.pt"></div>
+        <div class="fld"><label>Model Tipi</label><select id="ai-custom-type"><option value="yolov8_detect">YOLOv8 Detect</option><option value="yolov8_pose">YOLOv8 Pose</option><option value="onnx">ONNX</option></select></div>
+        <div class="fld"><label>Varsayilan Hassasiyet</label><input type="number" id="ai-custom-conf" value="0.5" min="0.1" max="0.95" step="0.05"></div>
+      </div>
+      <div style="margin-top:8px; display:flex; gap:6px; justify-content:flex-end;">
+        <button class="tac-btn" onclick="toggleCustomModelForm()">IPTAL</button>
+        <button class="tac-btn active" onclick="addCustomModule()">EKLE</button>
+      </div>
+    </div>
+    <div class="sec-hdr" style="margin-top:14px;">03 // AKTIF MODUL SONUCLARI</div>
+    <div class="ai-results-panel" id="ai-results-panel">
+      <div style="font-size:10px; color:rgba(210,235,220,0.5); padding:8px;">Aktif modul yok</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== AI MODULES PANEL ===== */
+const AI_MODULE_META = {
+  pose: { icon: "🦴", name: "POSE - Poz Tahmini" },
+  person: { icon: "👤", name: "Insan Tanima" },
+  multi_person: { icon: "👥", name: "Coklu Insan Tanima" },
+  ocr: { icon: "📝", name: "OCR - Metin Tanima" },
+  plate: { icon: "🔢", name: "Plaka Tanima" },
+  vehicle: { icon: "🚗", name: "Arac Tanima" },
+  aircraft: { icon: "✈️", name: "Hava Araci Tanima" },
+  animal: { icon: "🐾", name: "Hayvan Tanima" },
+  object: { icon: "📦", name: "Nesne Tanima" }
+};
+let aiModulesCache = [];
+let aiDownloadPollers = {};
+let aiModuleResults = {};
+
+function openAiModules() {
+  document.getElementById("ai-modules-modal").style.display = "flex";
+  loadAiModules();
+}
+function closeAiModules() {
+  document.getElementById("ai-modules-modal").style.display = "none";
+}
+
+async function loadAiModules() {
+  try {
+    const res = await fetch("/api/ai_modules");
+    const data = await res.json();
+    aiModulesCache = data.modules || [];
+    renderAiModules();
+  } catch (e) { console.error("AI modules load error:", e); }
+}
+
+function renderAiModules() {
+  const bg = document.getElementById("ai-builtin-grid");
+  const cg = document.getElementById("ai-custom-grid");
+  bg.innerHTML = "";
+  cg.innerHTML = "";
+  aiModulesCache.forEach(mod => {
+    const card = createModuleCard(mod);
+    if (mod.builtin) bg.appendChild(card);
+    else cg.appendChild(card);
+  });
+  if (cg.children.length === 0) {
+    cg.innerHTML = '<div style="font-size:10px; color:rgba(210,235,220,0.4); padding:8px; grid-column:1/-1;">Henuz ozel model eklenmedi</div>';
+  }
+}
+
+function getStatusInfo(mod) {
+  if (mod.enabled && mod.model_loaded) return { text: "AKTIF", cls: "st-active" };
+  if (mod.download_status === "error") return { text: "HATA", cls: "st-error" };
+  if (mod.download_status === "downloading") return { text: "INDIRILIYOR", cls: "st-downloading" };
+  if (mod.download_status === "needs_install") return { text: "KURULUM GEREKLI", cls: "st-needs-install" };
+  if (mod.download_status === "downloaded") return { text: "HAZIR", cls: "st-ready" };
+  return { text: "INDIRILMEDI", cls: "st-none" };
+}
+
+function createModuleCard(mod) {
+  const meta = AI_MODULE_META[mod.id] || { icon: "🔧", name: mod.name || mod.id };
+  const st = getStatusInfo(mod);
+  const isDl = mod.download_status === "downloaded" || mod.download_status === "needs_install";
+  const isDling = mod.download_status === "downloading";
+  const confPct = Math.round((mod.confidence || 0.5) * 100);
+  const r = aiModuleResults[mod.id];
+  const detCount = r ? r.count : 0;
+  const card = document.createElement("div");
+  let cls = "ai-module-card";
+  if (mod.enabled && mod.model_loaded) cls += " active";
+  else if (isDling) cls += " downloading";
+  else if (mod.download_status === "error") cls += " error";
+  card.className = cls;
+  card.innerHTML = `
+    <div class="ai-card-header">
+      <div class="ai-card-name"><span>${meta.icon}</span><span>${meta.name}</span></div>
+      <label class="ai-toggle">
+        <input type="checkbox" ${mod.enabled ? "checked" : ""} ${!isDl ? "disabled" : ""} onchange="toggleAiModule('${mod.id}', this.checked)">
+        <span class="ai-toggle-track"></span>
+      </label>
+    </div>
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <span class="ai-status ${st.cls}" id="ai-status-${mod.id}">${st.text}</span>
+      <span class="ai-results-badge ${detCount > 0 ? 'has-results' : ''}" id="ai-det-${mod.id}">${detCount} tespit</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:5px;">
+      ${!isDl && !isDling ? `<button class="ai-dl-btn" onclick="downloadAiModel('${mod.id}')">INDIR</button>` : ""}
+      ${isDling ? `<button class="ai-dl-btn" disabled>INDIRILIYOR...</button>` : ""}
+      <div class="ai-progress-bar ${isDling ? 'visible' : ''}" id="ai-prog-bar-${mod.id}">
+        <div class="ai-progress-fill" id="ai-prog-fill-${mod.id}" style="width:${mod.download_progress || 0}%"></div>
+        <div class="ai-progress-text" id="ai-prog-text-${mod.id}">${mod.download_progress || 0}%</div>
+      </div>
+      ${isDl && mod.model_file !== '__easyocr__' ? `<button class="ai-dl-btn del-btn" onclick="deleteAiModel('${mod.id}')">SIL</button>` : ""}
+      ${!mod.builtin ? `<button class="ai-dl-btn del-btn" onclick="removeCustomModule('${mod.id}')">KALDIR</button>` : ""}
+    </div>
+    <div class="ai-slider-row">
+      <span class="ai-slider-label" id="ai-conf-lbl-${mod.id}">Hassasiyet: ${confPct}%</span>
+      <input type="range" class="ai-slider" min="10" max="95" value="${confPct}" ${!isDl ? "disabled" : ""}
+             oninput="document.getElementById('ai-conf-lbl-${mod.id}').textContent='Hassasiyet: '+this.value+'%'"
+             onchange="setAiModuleConfidence('${mod.id}', this.value)">
+    </div>`;
+  return card;
+}
+
+async function toggleAiModule(mid, enabled) {
+  try { await fetch(`/api/ai_modules/${mid}/toggle`, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({enabled}) }); setTimeout(loadAiModules, 300); } catch(e) {}
+}
+async function setAiModuleConfidence(mid, pctVal) {
+  try { await fetch(`/api/ai_modules/${mid}/config`, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({confidence: parseInt(pctVal)/100.0}) }); } catch(e) {}
+}
+async function downloadAiModel(mid) {
+  try { await fetch(`/api/ai_modules/${mid}/download`, {method:"POST"}); pollDownloadProgress(mid); loadAiModules(); } catch(e) {}
+}
+function pollDownloadProgress(mid) {
+  if (aiDownloadPollers[mid]) return;
+  aiDownloadPollers[mid] = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/ai_modules/${mid}/download_status`);
+      const d = await res.json();
+      const fill = document.getElementById(`ai-prog-fill-${mid}`);
+      const text = document.getElementById(`ai-prog-text-${mid}`);
+      const bar = document.getElementById(`ai-prog-bar-${mid}`);
+      if (fill) fill.style.width = `${d.progress_pct||0}%`;
+      if (text) text.textContent = `${d.progress_pct||0}%`;
+      if (bar) bar.classList.add("visible");
+      if (d.status === "downloaded" || d.status === "error") {
+        clearInterval(aiDownloadPollers[mid]); delete aiDownloadPollers[mid]; loadAiModules();
+      }
+    } catch(e) { clearInterval(aiDownloadPollers[mid]); delete aiDownloadPollers[mid]; }
+  }, 1000);
+}
+async function deleteAiModel(mid) {
+  if (!confirm("Bu modelin indirilmis dosyasi silinecek. Emin misiniz?")) return;
+  try { await fetch(`/api/ai_modules/${mid}/delete_model`, {method:"POST"}); loadAiModules(); } catch(e) {}
+}
+function toggleCustomModelForm() {
+  document.getElementById("ai-custom-form").classList.toggle("visible");
+}
+async function addCustomModule() {
+  const name = document.getElementById("ai-custom-name").value.trim();
+  const url = document.getElementById("ai-custom-url").value.trim();
+  const conf = parseFloat(document.getElementById("ai-custom-conf").value) || 0.5;
+  if (!name || !url) { alert("Model adi ve URL/dosya yolu gereklidir."); return; }
+  try {
+    const res = await fetch("/api/ai_modules/custom", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({name, model_url:url, model_type:"yolov8_detect", default_confidence:conf}) });
+    const d = await res.json();
+    if (d.ok) { document.getElementById("ai-custom-name").value=""; document.getElementById("ai-custom-url").value=""; toggleCustomModelForm(); loadAiModules(); }
+    else alert("Hata: "+(d.error||"Bilinmeyen"));
+  } catch(e) {}
+}
+async function removeCustomModule(mid) {
+  if (!confirm("Bu ozel model tamamen kaldirilacak. Emin misiniz?")) return;
+  try { await fetch(`/api/ai_modules/custom/${mid}`, {method:"DELETE"}); loadAiModules(); } catch(e) {}
+}
+function updateAiResultsPanel(aiData) {
+  if (!aiData) return;
+  const panel = document.getElementById("ai-results-panel");
+  if (!panel) return;
+  aiModuleResults = aiData.results || {};
+  const activeIds = aiData.active || [];
+  if (activeIds.length === 0) {
+    panel.innerHTML = '<div style="font-size:10px; color:rgba(210,235,220,0.5); padding:8px;">Aktif modul yok</div>';
+    return;
+  }
+  let html = "";
+  activeIds.forEach(mid => {
+    const r = aiModuleResults[mid] || {};
+    const meta = AI_MODULE_META[mid] || { icon: "🔧", name: mid };
+    html += `<div class="ai-result-stat"><span class="stat-name">${meta.icon} ${meta.name}</span><span class="stat-vals">${r.count||0} tespit | ${r.fps||0} FPS | ${r.infer_ms||0}ms</span></div>`;
+  });
+  panel.innerHTML = html;
+  for (const [mid, r] of Object.entries(aiModuleResults)) {
+    const badge = document.getElementById(`ai-det-${mid}`);
+    if (badge) { badge.textContent = `${r.count||0} tespit`; badge.className = "ai-results-badge" + ((r.count||0) > 0 ? " has-results" : ""); }
+  }
+}
 </script>
 </body>
 </html>

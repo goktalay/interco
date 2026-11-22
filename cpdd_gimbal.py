@@ -156,22 +156,20 @@ class CPDD075Controller:
         """Kamera görüntü kaynağını değiştirir.
 
         Üç yöntem paralel denenir:
-          1) Ham JSON (orijinal SDK uyumlu)
-          2) 44-byte binary frame (Seri Protokol V2.14, 0x25 komutu)
-          3) Metin komutu (bazı firmware'ler destekler)
+          1) 0x31 döngüsel geçiş (Wireshark'ta SDK yazılımının kullandığı yöntem)
+          2) 0x25 doğrudan geçiş (Seri Protokol V2.14)
+          3) Ham JSON (SDK uyumlu)
 
-        JSON mode mapping (SDK/orijinal):
-            WIDE=0, THERMAL=1, NARROW=2, FUSION=3
-        Binary param mapping (Protokol V2.14):
+        0x31 (Video switch): Parametresiz, her çağrıda A->B->Split->C döngüsü
+        0x25 (Video display mode): Doğrudan hedef kamera seçimi
             0x00=IR1(THERMAL), 0x01=VIS1(WIDE), 0x02=VIS2(NARROW), 0x03=IR2(FUSION)
+        JSON mode: WIDE=0, THERMAL=1, NARROW=2, FUSION=3
         """
         mode_u = mode.upper().strip()
         self.current_view = mode_u
 
-        # JSON mode numaraları (orijinal SDK sırasına göre)
-        json_mode_map = {"WIDE": 0, "THERMAL": 1, "NARROW": 2, "FUSION": 3}
-        # Binary param (Seri Protokol V2.14 - Komut 0x25)
         bin_param_map = {"WIDE": "01", "THERMAL": "00", "NARROW": "02", "FUSION": "03"}
+        json_mode_map = {"WIDE": 0, "THERMAL": 1, "NARROW": 2, "FUSION": 3}
 
         json_mode = json_mode_map.get(mode_u, 0)
         bin_param = bin_param_map.get(mode_u, "00")
@@ -182,17 +180,20 @@ class CPDD075Controller:
             self.zoom_level = 4.0
 
         target = self._get_target()
-        print(f"[CPDD] switch_view({mode_u}) -> JSON mode={json_mode}, BIN 0x25 param=0x{bin_param} -> {target[0]}:{target[1]}")
+        print(f"[CPDD] switch_view({mode_u}) -> 0x31(cycle) + 0x25(param=0x{bin_param}) + JSON(mode={json_mode}) -> {target[0]}:{target[1]}")
 
-        # Yöntem 1: Ham JSON gönder (orijinal SDK uyumlu - en olası çalışan yöntem)
+        # Yöntem 1: 0x31 döngüsel geçiş (SDK yazılımının Wireshark'ta kullandığı komut)
+        self.send_custom_hex("31", "00 00 00 00")
+
+        # Yöntem 2: 0x25 doğrudan hedef kamera (Protokol V2.14)
+        self.send_custom_hex("25", f"{bin_param} 00 00 00")
+
+        # Yöntem 3: Ham JSON (SDK uyumlu)
         json_cmd = {"cmd": "set_view", "mode": json_mode}
         json_bytes = json.dumps(json_cmd, separators=(",", ":")).encode("utf-8")
         self.send_raw_bytes(json_bytes, wait_reply=False)
 
-        # Yöntem 2: 44-byte binary frame (Seri Protokol V2.14)
-        self.send_custom_hex("25", f"{bin_param} 00 00 00")
-
-        self.last_status = f"NET UDP -> {mode_u} (json:{json_mode} bin:0x{bin_param})"
+        self.last_status = f"NET UDP -> {mode_u} (0x31+0x25:0x{bin_param}+json:{json_mode})"
 
     def zoom_step(self, direction: int):
         if direction > 0:

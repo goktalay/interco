@@ -2259,6 +2259,24 @@
     <div class="ai-results-panel" id="ai-results-panel">
       <div style="font-size:10px; color:rgba(210,235,220,0.5); padding:8px;">Aktif modul yok</div>
     </div>
+
+    <div class="sec-hdr" style="margin-top:14px;">04 // YAPILANDIRMA PROFILLERI</div>
+    <div class="profile-save-row">
+      <input type="text" id="profile-name-input" placeholder="Profil adi girin...">
+      <button class="ai-dl-btn" onclick="saveAiProfile()">KAYDET</button>
+    </div>
+    <div id="profile-list">
+      <div style="font-size:10px;color:rgba(210,235,220,0.4);padding:4px;">Kayitli profil yok</div>
+    </div>
+
+    <div class="sec-hdr" style="margin-top:14px;">05 // KLASOR YONETIMI</div>
+    <div class="folder-create-row">
+      <input type="text" id="new-folder-name" placeholder="Yeni klasor adi...">
+      <button class="ai-dl-btn" onclick="createFolder()">OLUSTUR</button>
+    </div>
+    <div class="folders-grid" id="folders-grid">
+      <div style="font-size:10px; color:rgba(210,235,220,0.4); padding:8px; grid-column:1/-1;">Henuz klasor eklenmedi</div>
+    </div>
   </div>
 </div>
 
@@ -2282,6 +2300,8 @@ let aiModuleResults = {};
 function openAiModules() {
   document.getElementById("ai-modules-modal").style.display = "flex";
   loadAiModules();
+  loadFolders();
+  loadAiProfiles();
 }
 function closeAiModules() {
   document.getElementById("ai-modules-modal").style.display = "none";
@@ -2436,6 +2456,151 @@ function updateAiResultsPanel(aiData) {
     const badge = document.getElementById(`ai-det-${mid}`);
     if (badge) { badge.textContent = `${r.count||0} tespit`; badge.className = "ai-results-badge" + ((r.count||0) > 0 ? " has-results" : ""); }
   }
+}
+
+/* ===== KLASOR YONETIMI ===== */
+let foldersCache = {};
+
+async function loadFolders() {
+  try {
+    const res = await fetch("/api/folders");
+    const data = await res.json();
+    foldersCache = data.folders || {};
+    renderFolders();
+  } catch(e) { console.error("Folders load error:", e); }
+}
+
+function renderFolders() {
+  const grid = document.getElementById("folders-grid");
+  if (!grid) return;
+  if (Object.keys(foldersCache).length === 0) {
+    grid.innerHTML = '<div style="font-size:10px; color:rgba(210,235,220,0.4); padding:8px; grid-column:1/-1;">Henuz klasor eklenmedi</div>';
+    return;
+  }
+  let html = "";
+  for (const [fid, folder] of Object.entries(foldersCache)) {
+    const camTags = (folder.cameras || []).map(c =>
+      `<span class="folder-cam-tag">${c} <button onclick="removeCamFromFolder('${fid}','${c}')" class="folder-cam-remove">×</button></span>`
+    ).join("");
+    html += `<div class="folder-card">
+      <div class="folder-header">
+        <span class="folder-name">${folder.name}</span>
+        <button class="ai-dl-btn del-btn" onclick="deleteFolder('${fid}')">SIL</button>
+      </div>
+      <div class="folder-cameras">${camTags || '<span style="font-size:9px;color:rgba(210,235,220,0.3);">Kamera yok</span>'}</div>
+      <div class="folder-add-cam">
+        <select id="folder-cam-sel-${fid}" style="flex:1;height:24px;font-size:10px;background:#0a1210;color:var(--hud-green);border:1px solid var(--border-subtle);font-family:var(--font-hud);">
+          <option value="">Kamera ekle...</option>
+          <option value="WIDE">WIDE</option>
+          <option value="NARROW">NARROW</option>
+          <option value="THERMAL">THERMAL</option>
+          <option value="WEBCAM">WEBCAM</option>
+        </select>
+        <button class="ai-dl-btn" onclick="addCamToFolder('${fid}')">EKLE</button>
+      </div>
+    </div>`;
+  }
+  grid.innerHTML = html;
+}
+
+async function createFolder() {
+  const input = document.getElementById("new-folder-name");
+  const name = input.value.trim();
+  if (!name) return;
+  try {
+    const res = await fetch("/api/folders", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({name})
+    });
+    const d = await res.json();
+    if (d.ok) { input.value = ""; loadFolders(); }
+    else alert(d.error || "Hata");
+  } catch(e) { console.error(e); }
+}
+
+async function deleteFolder(fid) {
+  if (!confirm("Klasor silinecek. Emin misiniz?")) return;
+  await fetch(`/api/folders/${fid}`, {method:"DELETE"});
+  loadFolders();
+}
+
+async function addCamToFolder(fid) {
+  const sel = document.getElementById(`folder-cam-sel-${fid}`);
+  const cam = sel.value;
+  if (!cam) return;
+  await fetch(`/api/folders/${fid}/cameras`, {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({camera_key: cam})
+  });
+  loadFolders();
+}
+
+async function removeCamFromFolder(fid, cam) {
+  await fetch(`/api/folders/${fid}/cameras/${cam}`, {method:"DELETE"});
+  loadFolders();
+}
+
+/* ===== AI PROFIL YONETIMI ===== */
+
+async function loadAiProfiles() {
+  try {
+    const res = await fetch("/api/ai_profiles");
+    const data = await res.json();
+    renderProfileList(data.profiles || []);
+  } catch(e) { console.error(e); }
+}
+
+function renderProfileList(profiles) {
+  const list = document.getElementById("profile-list");
+  if (!list) return;
+  if (profiles.length === 0) {
+    list.innerHTML = '<div style="font-size:10px;color:rgba(210,235,220,0.4);padding:4px;">Kayitli profil yok</div>';
+    return;
+  }
+  list.innerHTML = profiles.map(p => `
+    <div class="profile-item">
+      <span class="profile-name">${p}</span>
+      <button class="ai-dl-btn" onclick="applyProfile('${p}')">UYGULA</button>
+      <button class="ai-dl-btn del-btn" onclick="deleteProfile('${p}')">SIL</button>
+    </div>
+  `).join("");
+}
+
+async function saveAiProfile() {
+  const input = document.getElementById("profile-name-input");
+  const name = input.value.trim();
+  if (!name) return;
+  try {
+    const res = await fetch("/api/ai_profiles/save", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({name})
+    });
+    const d = await res.json();
+    if (d.ok) { input.value = ""; loadAiProfiles(); }
+    else alert(d.error || "Hata");
+  } catch(e) { console.error(e); }
+}
+
+async function applyProfile(name) {
+  try {
+    const res = await fetch("/api/ai_profiles/load", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({name})
+    });
+    const d = await res.json();
+    if (d.ok) { loadAiModules(); }
+    else alert(d.error || "Profil uygulanamadi");
+  } catch(e) { console.error(e); }
+}
+
+async function deleteProfile(name) {
+  if (!confirm(`"${name}" profili silinecek. Emin misiniz?`)) return;
+  await fetch(`/api/ai_profiles/${encodeURIComponent(name)}`, {method:"DELETE"});
+  loadAiProfiles();
 }
 </script>
 </body>

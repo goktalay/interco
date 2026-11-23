@@ -29,6 +29,9 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-tap-highlight-color:transparent;}
 html,body{width:100vw;height:100vh;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Consolas','JetBrains Mono',monospace;}
+select{color-scheme:dark;}
+select option{background:var(--bg3);color:var(--text);}
+select option:checked,select option:hover{background:var(--accent);color:#04160a;}
 
 /* ── SIDEBAR ── */
 #sidebar{
@@ -596,8 +599,9 @@ html,body{width:100vw;height:100vh;overflow:hidden;background:var(--bg);color:va
     <div class="settings-tab-content" id="tab-test">
       <div class="sec-hdr">TEST VİDEO KAYNAĞI</div>
       <div class="form-grid">
-        <div class="fld"><label>Kaynak Tipi</label><select id="cfg-test-type" onchange="onTestTypeChange()"><option value="WEBCAM">Web Kamerası</option><option value="CUSTOM">Video / RTSP URL</option></select></div>
+        <div class="fld"><label>Kaynak Tipi</label><select id="cfg-test-type" onchange="onTestTypeChange()"><option value="WEBCAM">Web Kamerası</option><option value="VIDEO">Video (Veri Seti)</option><option value="CUSTOM">Video / RTSP URL</option></select></div>
         <div class="fld" id="box-custom-source"><label id="lbl-custom-source">Kamera İndeksi</label><div class="input-with-btn"><input type="text" id="cfg-cam-webcam" placeholder="0"><button type="button" id="btn-scan-cam" class="tac-btn" onclick="scanWebcams()">TARA</button></div></div>
+        <div class="fld" id="box-video-source" style="display:none;"><label>Video Klasörü</label><select id="cfg-video-folder" onchange="onVideoFolderChange()"></select></div>
       </div>
     </div>
     <div class="settings-tab-content" id="tab-pid">
@@ -861,7 +865,7 @@ document.addEventListener('fullscreenchange', () => { setTimeout(() => { resizeH
 function _loadSettingsValues() {
   document.getElementById("test-report").style.display = "none";
   switchSettingsTab("tab-drone");
-  fetch("/api/settings").then(r => r.json()).then(s => {
+  fetch("/api/settings").then(r => r.json()).then(async s => {
     document.getElementById("cfg-tel-proto").value = s.telemetry_protocol || "SITL";
     document.getElementById("cfg-tel-host").value = s.telemetry_host || "127.0.0.1";
     document.getElementById("cfg-tel-port").value = s.telemetry_port || 5760;
@@ -878,9 +882,14 @@ function _loadSettingsValues() {
     document.getElementById("cfg-cam-tilt").value = s.camera_tilt_deg !== undefined ? s.camera_tilt_deg : 30;
     document.getElementById("cfg-cam-vfov").value = s.camera_vfov_deg !== undefined ? s.camera_vfov_deg : 60;
     const rawTestUrl = s.cameras?.WEBCAM?.url || "0";
-    if (/^\d+$/.test(rawTestUrl.trim())) { document.getElementById("cfg-test-type").value = "WEBCAM"; document.getElementById("cfg-cam-webcam").value = rawTestUrl.trim(); }
-    else { document.getElementById("cfg-test-type").value = "CUSTOM"; document.getElementById("cfg-cam-webcam").value = rawTestUrl; }
-    onTestTypeChange();
+    const datasetMatch = rawTestUrl.trim().match(/^dataset:(video\d{1,2})$/i);
+    if (datasetMatch) {
+      document.getElementById("cfg-test-type").value = "VIDEO";
+      onTestTypeChange();
+      await loadVideoFolders();
+      document.getElementById("cfg-video-folder").value = datasetMatch[1].toLowerCase();
+    } else if (/^\d+$/.test(rawTestUrl.trim())) { document.getElementById("cfg-test-type").value = "WEBCAM"; document.getElementById("cfg-cam-webcam").value = rawTestUrl.trim(); onTestTypeChange(); }
+    else { document.getElementById("cfg-test-type").value = "CUSTOM"; document.getElementById("cfg-cam-webcam").value = rawTestUrl; onTestTypeChange(); }
     document.getElementById("cfg-thrust").value = s.intercept_thrust_max || 1.0;
     document.getElementById("cfg-yaw-gain").value = s.yaw_rate_gain || 1.8;
     document.getElementById("cfg-pitch-gain").value = s.pitch_rate_gain || 1.5;
@@ -1473,20 +1482,54 @@ async function setCamera(mode) {
 function onTestTypeChange() {
   const tType = document.getElementById("cfg-test-type").value;
   const boxCustom = document.getElementById("box-custom-source");
+  const boxVideo = document.getElementById("box-video-source");
   const btnScan = document.getElementById("btn-scan-cam");
   const lblCustom = document.getElementById("lbl-custom-source");
   const inpCustom = document.getElementById("cfg-cam-webcam");
-  boxCustom.style.display = "flex";
-  if (tType === "WEBCAM") {
+  if (tType === "VIDEO") {
+    boxCustom.style.display = "none";
+    boxVideo.style.display = "flex";
+    loadVideoFolders();
+  } else if (tType === "WEBCAM") {
+    boxCustom.style.display = "flex";
+    boxVideo.style.display = "none";
     if (btnScan) btnScan.style.display = "inline-flex";
     if (lblCustom) lblCustom.innerText = "Kamera Indeksi";
     if (inpCustom && !/^\d+$/.test(inpCustom.value.trim())) inpCustom.value = "0";
   } else {
+    boxCustom.style.display = "flex";
+    boxVideo.style.display = "none";
     if (btnScan) btnScan.style.display = "none";
     if (lblCustom) lblCustom.innerText = "Video / RTSP URL";
     if (inpCustom && /^\d+$/.test(inpCustom.value.trim())) inpCustom.value = "";
   }
 }
+
+async function loadVideoFolders() {
+  const sel = document.getElementById("cfg-video-folder");
+  const prevVal = sel.value;
+  try {
+    const res = await fetch("/api/dataset_folders");
+    const data = await res.json();
+    const folders = (data.folders || []).filter(f => f.exists && f.count > 0);
+    sel.innerHTML = "";
+    if (folders.length === 0) {
+      sel.innerHTML = '<option value="">Video klasoru bulunamadi</option>';
+      return;
+    }
+    folders.forEach(f => {
+      const opt = document.createElement("option");
+      opt.value = f.name;
+      opt.innerText = `${f.name.replace(/^video0?/, "Video ")} (${f.count} kare)`;
+      sel.appendChild(opt);
+    });
+    if (prevVal && folders.some(f => f.name === prevVal)) sel.value = prevVal;
+  } catch(e) {
+    sel.innerHTML = '<option value="">Video listesi alinamadi</option>';
+  }
+}
+
+function onVideoFolderChange() {}
 
 async function scanWebcams() {
   try { const res = await fetch("/api/scan_webcams"); const data = await res.json(); if (data.webcams && data.webcams.length > 0) document.getElementById("cfg-cam-webcam").value = data.webcams[0]; } catch(e) {}
@@ -1524,7 +1567,10 @@ async function saveAndTest() {
   let hostVal = document.getElementById("cfg-tel-host").value.trim();
   if (protoVal === "SITL" || hostVal === "DAHILI SITL" || !hostVal) hostVal = "127.0.0.1";
   const tType = document.getElementById("cfg-test-type").value;
-  let testSourceUrl = document.getElementById("cfg-cam-webcam").value.trim();
+  const selectedVideoFolder = document.getElementById("cfg-video-folder").value.trim();
+  let testSourceUrl = (tType === "VIDEO" && selectedVideoFolder)
+    ? `dataset:${selectedVideoFolder}`
+    : document.getElementById("cfg-cam-webcam").value.trim();
   const newBingKey = document.getElementById("cfg-bing-key").value.trim();
   const newCamTilt = parseFloat(document.getElementById("cfg-cam-tilt").value);
   const newCamVfov = parseFloat(document.getElementById("cfg-cam-vfov").value);

@@ -302,6 +302,8 @@ class VideoChannelStream:
                         self._fps_last_t = now_f
                     if self.is_looped_media:
                         time.sleep(0.025)
+                    else:
+                        time.sleep(0.004)  # webcam için ~250fps max, CPU'yu koru
                 else:
                     if not isinstance(self.cap, SequenceFolderCapture) and self.is_looped_media and self.cap is not None:
                         self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)

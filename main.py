@@ -43,18 +43,23 @@ async def index():
     with open("static/index.html", "r", encoding="utf-8") as f:
         return f.read()
 
-def mjpeg_generator():
+async def mjpeg_generator():
     while True:
-        if vision_sys.latest_annotated_jpeg:
+        jpg = vision_sys.latest_annotated_jpeg
+        if jpg:
             yield (
                 b"--frame\r\n"
-                b"Content-Type: image/jpeg\r\n\r\n" + vision_sys.latest_annotated_jpeg + b"\r\n"
+                b"Content-Type: image/jpeg\r\n\r\n" + jpg + b"\r\n"
             )
-        time.sleep(0.033)
+        await asyncio.sleep(0.033)
 
 @app.get("/video_feed")
 async def video_feed():
-    return StreamingResponse(mjpeg_generator(), media_type="multipart/x-mixed-replace; boundary=frame")
+    return StreamingResponse(
+        mjpeg_generator(),
+        media_type="multipart/x-mixed-replace; boundary=frame",
+        headers={"Cache-Control": "no-cache, no-store", "X-Accel-Buffering": "no"},
+    )
 
 @app.post("/api/lock")
 async def api_lock_target(req: LockRequest):

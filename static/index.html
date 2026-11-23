@@ -767,6 +767,31 @@ document.addEventListener('DOMContentLoaded', () => {
   makeFpDraggable('panel-log','fp-log-head'); makeFpResizable('panel-log','fp-log-resize');
   makeFpDraggable('settings-modal','fp-settings-head'); makeFpResizable('settings-modal','fp-settings-resize');
   makeFpDraggable('ai-modules-modal','fp-ai-head'); makeFpResizable('ai-modules-modal','fp-ai-resize');
+
+  /* Video stream bağlantı watchdog */
+  (function videoStreamWatchdog() {
+    const vs = document.getElementById('video-stream');
+    if (!vs) return;
+    let lastW = 0, staleCount = 0;
+
+    vs.onerror = function() {
+      setTimeout(() => { vs.src = '/video_feed?' + Date.now(); }, 1500);
+    };
+
+    setInterval(() => {
+      const w = vs.naturalWidth;
+      if (w === 0) {
+        staleCount++;
+        if (staleCount >= 3) {
+          vs.src = '/video_feed?' + Date.now();
+          staleCount = 0;
+        }
+      } else {
+        staleCount = 0;
+        lastW = w;
+      }
+    }, 3000);
+  })();
 });
 
 /* view divider drag (kamera-harita oranı) */

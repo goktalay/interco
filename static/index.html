@@ -223,9 +223,24 @@ select option:checked,select option:hover{background:var(--accent);color:#04160a
 .cp-badge.err{color:var(--red);border-color:rgba(255,59,48,.4);background:rgba(255,59,48,.08);}
 
 /* log panel */
-#panel-log{left:62px;bottom:56px;width:480px;max-height:320px;}
-#live-log-drawer{padding:6px 10px;}
-#live-log-lines>div{font-size:9px;line-height:1.6;color:var(--text2);border-bottom:1px solid rgba(57,255,90,.05);padding:1px 0;}
+#panel-log{left:62px;bottom:56px;width:520px;max-height:360px;}
+#live-log-drawer{padding:4px 8px;}
+#live-log-lines>div{font-size:9px;line-height:1.5;color:var(--text2);border-bottom:1px solid rgba(57,255,90,.05);padding:2px 0;display:flex;gap:4px;align-items:baseline;}
+#live-log-lines>div.log-err{color:var(--red);}
+#live-log-lines>div.log-warn{color:var(--amber);}
+#live-log-lines>div.log-info{color:var(--text2);}
+.log-ts{color:var(--text3);flex-shrink:0;font-size:8px;}
+.log-cat{font-size:7px;font-weight:900;letter-spacing:.8px;padding:0 3px;border-radius:2px;border:1px solid;flex-shrink:0;text-transform:uppercase;}
+.log-cat.cat-telemetri{color:rgba(100,180,255,.8);border-color:rgba(100,180,255,.3);}
+.log-cat.cat-sistem{color:rgba(57,255,90,.7);border-color:rgba(57,255,90,.2);}
+.log-cat.cat-kamera{color:rgba(200,160,255,.8);border-color:rgba(200,160,255,.3);}
+.log-cat.cat-komut{color:var(--amber);border-color:rgba(255,179,64,.3);}
+.log-cat.cat-err{color:var(--red);border-color:rgba(255,59,48,.3);}
+.log-msg{flex:1;word-break:break-all;}
+#log-filter-bar{display:flex;gap:4px;padding:4px 8px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center;flex-shrink:0;}
+.log-flt-btn{font-size:8px;font-weight:700;letter-spacing:.8px;padding:2px 6px;border-radius:3px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;text-transform:uppercase;}
+.log-flt-btn.active,.log-flt-btn:hover{background:rgba(57,255,90,.1);color:var(--accent);border-color:rgba(57,255,90,.3);}
+.log-flt-btn.flt-err.active,.log-flt-btn.flt-err:hover{background:rgba(255,59,48,.08);color:var(--red);border-color:rgba(255,59,48,.3);}
 #log-perf-summary{padding:5px 12px;font-size:9px;color:var(--text3);border-bottom:1px solid var(--border);flex-shrink:0;}
 
 /* settings + AI floating */
@@ -552,7 +567,15 @@ select option:checked,select option:hover{background:var(--accent);color:#04160a
     <button class="fp-close" onclick="fpClose('log')">✕</button>
   </div>
   <div id="log-perf-summary-fp" style="padding:5px 12px;font-size:9px;color:var(--text3);border-bottom:1px solid var(--border);flex-shrink:0;"></div>
-  <div class="fp-body" style="max-height:260px;overflow-y:auto;" id="live-log-drawer">
+  <div id="log-filter-bar">
+    <button class="log-flt-btn active" onclick="setLogCat('TÜMÜ',this)">TÜMÜ</button>
+    <button class="log-flt-btn" onclick="setLogCat('TELEMETRİ',this)">TELEMETRİ</button>
+    <button class="log-flt-btn" onclick="setLogCat('SİSTEM',this)">SİSTEM</button>
+    <button class="log-flt-btn" onclick="setLogCat('KAMERA',this)">KAMERA</button>
+    <button class="log-flt-btn" onclick="setLogCat('KOMUT',this)">KOMUT</button>
+    <button class="log-flt-btn flt-err" id="btn-log-errors" onclick="toggleLogErrors(this)">⚠ HATA/UYARI</button>
+  </div>
+  <div class="fp-body" style="max-height:240px;overflow-y:auto;" id="live-log-drawer">
     <div id="live-log-lines"></div>
   </div>
   <div class="fp-resize" id="fp-log-resize"></div>
@@ -908,6 +931,16 @@ const noSigBanner = document.getElementById("no-signal-banner");
 let lastTargetsSignature = "";
 let isMapFullscreen = false;
 let logsVisible = false;
+const logFilter = { cat: "TÜMÜ", onlyErrors: false };
+function setLogCat(cat, btn) {
+  logFilter.cat = cat;
+  document.querySelectorAll("#log-filter-bar .log-flt-btn:not(.flt-err)").forEach(b => b.classList.remove("active"));
+  if (btn) btn.classList.add("active");
+}
+function toggleLogErrors(btn) {
+  logFilter.onlyErrors = !logFilter.onlyErrors;
+  if (btn) btn.classList.toggle("active", logFilter.onlyErrors);
+}
 
 const hudState = {
   pitch: 0, targetPitch: 0,
@@ -1183,7 +1216,20 @@ ws.onmessage = (event) => {
   if (data.logs && logsVisible) {
     const logBox = document.getElementById("live-log-lines");
     if (logBox) {
-      logBox.innerHTML = data.logs.map(line => `<div>${line}</div>`).join("");
+      const filtered = data.logs.filter(e => {
+        if (typeof e !== "object") return false;
+        const catMatch = (logFilter.cat === "TÜMÜ") || (e.cat || "").toUpperCase() === logFilter.cat.replace("İ","I").replace("Ü","U");
+        const lvlMatch = !logFilter.onlyErrors || e.level === "ERROR" || e.level === "WARN";
+        return catMatch && lvlMatch;
+      });
+      const catClass = c => {
+        const m = {TELEMETRI:"cat-telemetri",SISTEM:"cat-sistem",KAMERA:"cat-kamera",KOMUT:"cat-komut"};
+        return m[(c||"").toUpperCase().replace("İ","I").replace("Ü","U")] || "cat-err";
+      };
+      const lvlClass = l => ({ERROR:"log-err",WARN:"log-warn",INFO:"log-info"}[l] || "log-info");
+      logBox.innerHTML = filtered.map(e =>
+        `<div class="${lvlClass(e.level)}"><span class="log-ts">${e.ts||""}</span><span class="log-cat ${catClass(e.cat)}">${e.cat||"?"}</span><span class="log-msg">${e.msg||""}</span></div>`
+      ).join("");
       const drawer = document.getElementById("live-log-drawer");
       if (drawer) drawer.scrollTop = drawer.scrollHeight;
     }

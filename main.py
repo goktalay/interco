@@ -454,7 +454,10 @@ async def websocket_telemetry(websocket: WebSocket):
                         if m["download_status"] == "downloading"
                     },
                 },
-                "logs": list(vision_sys.logs)[-18:],
+                "logs": sorted(
+                    list(vision_sys.logs) + list(mav_ctrl.logs),
+                    key=lambda x: x["t"] if isinstance(x, dict) else 0
+                )[-80:],
                 "cpdd": {
                     "view": cpdd_ctrl.current_view,
                     "zoom": cpdd_ctrl.zoom_level,

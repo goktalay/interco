@@ -4,6 +4,7 @@ import time
 import math
 import socket
 import threading
+from collections import deque
 
 os.environ["MAVLINK20"] = "1"
 
@@ -23,6 +24,13 @@ class MavlinkController:
         self.status_msg = "LINK BEKLENIYOR"
         self.current_conn_str = ""
         self.lock = threading.Lock()
+
+        self.logs = deque(maxlen=300)
+        self._last_armed = None
+        self._last_mode = None
+        self._last_connected = None
+        self._last_battery_warn = None
+        self._last_gps_warn = None
 
         self.sitl_state = {
             "mode": "STBY",
@@ -72,6 +80,16 @@ class MavlinkController:
             "engaged": False
         }
         threading.Thread(target=self._connection_worker, daemon=True).start()
+
+    def add_log(self, msg: str, cat: str = "TELEMETRI", level: str = "INFO"):
+        now = time.time()
+        self.logs.append({
+            "t": now,
+            "ts": time.strftime("%H:%M:%S", time.localtime(now)),
+            "cat": cat,
+            "level": level,
+            "msg": msg
+        })
 
     def reset_sitl(self):
         self.sitl_state.update({
@@ -211,6 +229,7 @@ class MavlinkController:
         self.sitl_state["mode"] = mode_upper
         self.telemetry["mode"] = mode_upper
         print(f"[INTERCO] MOD DEGISTIRILDI -> {mode_upper}")
+        self.add_log(f"UCUS MODU KOMUTU: {mode_upper}", cat="KOMUT", level="INFO")
 
         if mode_upper in ("TAKEOFF", "GUIDED", "AUTO", "LOITER", "POSHOLD", "ALT_HOLD", "STABILIZE", "ACRO", "SPORT"):
             if self.sitl_state["alt"] > 0.5:
@@ -227,6 +246,7 @@ class MavlinkController:
         self.sitl_state["mode"] = "RTL"
         self.telemetry["mode"] = "RTL"
         print("[INTERCO] KOMUT: EVE DON (RTL)")
+        self.add_log("KOMUT: EVE DON (RTL)", cat="KOMUT", level="WARN")
         if cfg.get_mavlink_connection_string() != "sitl:internal:sim" and self.connected and self.master:
             try:
                 self.master.set_mode("RTL")
@@ -244,6 +264,7 @@ class MavlinkController:
         self.telemetry["in_air"] = True
         self.telemetry["mode"] = "TAKEOFF"
         print(f"[INTERCO] KOMUT: KALKIS (Hedef Irtifa: {target_alt}m)")
+        self.add_log(f"KOMUT: KALKIS (Hedef Irtifa: {target_alt}m)", cat="KOMUT", level="WARN")
         if cfg.get_mavlink_connection_string() != "sitl:internal:sim" and self.connected and self.master:
             try:
                 self.master.set_mode("GUIDED")
@@ -263,6 +284,7 @@ class MavlinkController:
         self.sitl_state["mode"] = "LAND"
         self.telemetry["mode"] = "LAND"
         print("[INTERCO] KOMUT: INIS (LAND)")
+        self.add_log("KOMUT: INIS (LAND)", cat="KOMUT", level="WARN")
         if cfg.get_mavlink_connection_string() != "sitl:internal:sim" and self.connected and self.master:
             try:
                 self.master.set_mode("LAND")
@@ -278,6 +300,7 @@ class MavlinkController:
             self.sitl_state["mode"] = "STBY"
             self.telemetry["mode"] = "STBY"
         print("[INTERCO] KOMUT: POSITION HOLD")
+        self.add_log("KOMUT: POSITION HOLD", cat="KOMUT", level="INFO")
         if cfg.get_mavlink_connection_string() != "sitl:internal:sim" and self.connected and self.master:
             try:
                 self.master.set_mode("POSHOLD")
@@ -523,6 +546,7 @@ class MavlinkController:
                         self.connected = False
                         self.telemetry["connected"] = False
                         self.telemetry["status_msg"] = "LINK KAYBI"
+                        self.add_log("TELEMETRI BAGLANTISI KOPTU (Heartbeat alinamiyor)", level="ERROR")
                     continue
 
                 msg_type = msg.get_type()
@@ -535,13 +559,25 @@ class MavlinkController:
                     proto_label = target_conn.split(":")[0].upper()
                     sys_id = msg.get_srcSystem() or 1
                     self.telemetry["status_msg"] = f"{proto_label} AKTIF [SYS:{sys_id}]"
+                    self.add_log(f"TELEMETRI BAGLANTISI KURULDU ({proto_label} SYS:{sys_id})", level="INFO")
                     self._send_gcs_heartbeat_and_stream_req()
 
                 self.last_heartbeat = time.time()
 
                 if msg_type == "HEARTBEAT":
-                    self.telemetry["armed"] = bool(msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED)
-                    self.telemetry["mode"] = mavutil.mode_string_v10(msg)
+                    armed_now = bool(msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED)
+                    mode_now = mavutil.mode_string_v10(msg)
+                    self.telemetry["armed"] = armed_now
+                    self.telemetry["mode"] = mode_now
+
+                    if self._last_armed is not None and armed_now != self._last_armed:
+                        self.add_log("MOTORLAR ARM EDILDI" if armed_now else "MOTORLAR DISARM EDILDI",
+                                     level="WARN" if armed_now else "INFO")
+                    self._last_armed = armed_now
+
+                    if self._last_mode is not None and mode_now != self._last_mode:
+                        self.add_log(f"UCUS MODU DEGISTI: {self._last_mode} -> {mode_now}", level="INFO")
+                    self._last_mode = mode_now
 
                 elif msg_type == "ATTITUDE":
                     self.telemetry["roll"] = round(math.degrees(msg.roll), 2)
@@ -557,13 +593,31 @@ class MavlinkController:
                     self.telemetry["in_air"] = msg.alt > 1.0
 
                 elif msg_type == "SYS_STATUS":
-                    self.telemetry["battery_v"] = round(msg.voltage_battery / 1000.0, 2)
+                    batt_v = round(msg.voltage_battery / 1000.0, 2)
+                    self.telemetry["battery_v"] = batt_v
                     self.telemetry["battery_pct"] = msg.battery_remaining
+                    if batt_v > 1.0:
+                        is_low = batt_v < 14.0
+                        if self._last_battery_warn is False and is_low:
+                            self.add_log(f"BATARYA DUSUK: {batt_v} V", level="ERROR")
+                        self._last_battery_warn = is_low
 
                 elif msg_type == "GPS_RAW_INT":
                     self.telemetry["lat"] = msg.lat / 1e7
                     self.telemetry["lon"] = msg.lon / 1e7
-                    self.telemetry["satellites"] = msg.satellites_visible
+                    sats = msg.satellites_visible
+                    self.telemetry["satellites"] = sats
+                    is_gps_low = sats < 6
+                    if self._last_gps_warn is False and is_gps_low:
+                        self.add_log(f"GPS UYDU SAYISI DUSUK: {sats}", level="WARN")
+                    self._last_gps_warn = is_gps_low
+
+                elif msg_type == "STATUSTEXT":
+                    severity = getattr(msg, "severity", 6)
+                    text = msg.text.strip() if hasattr(msg, "text") else ""
+                    if text:
+                        level = "ERROR" if severity <= 3 else ("WARN" if severity <= 5 else "INFO")
+                        self.add_log(f"OTOPILOT: {text}", level=level)
 
             except Exception:
                 self.connected = False
@@ -582,6 +636,10 @@ class MavlinkController:
         cam_tilt = float(cfg.data.get("camera_tilt_deg", 30.0))
         launch_pitch = -max(20.0, min(45.0, cam_tilt))
 
+        was_disarmed = not self.telemetry.get("armed", False)
+        if was_disarmed:
+            self.add_log("ANGAJMAN: DRONE DISARM DURUMUNDA - FORCE ARM UYGULANACAK", cat="KOMUT", level="WARN")
+
         self.telemetry["engaged"] = True
         self.telemetry["armed"] = True
         self.telemetry["in_air"] = True
@@ -594,6 +652,7 @@ class MavlinkController:
         self.sitl_state["throttle"] = 100
         self.sitl_state["last_cmd_time"] = time.time()
 
+        self.add_log(f"ANGAJMAN BASLADI: FORCE ARM + GUIDED + ONE YATIS ({launch_pitch:.0f} derece) + %%100 GAZ", cat="KOMUT", level="ERROR")
         print(f"[INTERCO] TUTUCUDAN FIRLATMA / ANGAJMAN: ARM + GUIDED + ONE YATIS ({launch_pitch:.0f} deg) + %100 GAZ!")
 
         if cfg.get_mavlink_connection_string() == "sitl:internal:sim":
@@ -629,7 +688,16 @@ class MavlinkController:
 
         try:
             self.master.set_mode("GUIDED")
-            self.master.arducopter_arm()
+            # Force arm: param2=21196 ArduPilot magic number, tum guvenlik kontrollerini atlar
+            self.master.mav.command_long_send(
+                self.master.target_system,
+                self.master.target_component,
+                mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+                0,
+                1,      # param1: 1=arm
+                21196,  # param2: force arm
+                0, 0, 0, 0, 0
+            )
 
             half_p = math.radians(launch_pitch) / 2.0
             q_init = [math.cos(half_p), 0.0, math.sin(half_p), 0.0]

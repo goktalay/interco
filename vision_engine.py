@@ -339,22 +339,47 @@ class VisionSystem:
         self.compute_device = "GPU (CUDA)" if torch.cuda.is_available() else "CPU (NO-CUDA)"
         self.pipeline_fps = 0.0
         self.infer_ms = 0.0
-        self.logs = deque(maxlen=30)
+        self.logs = deque(maxlen=300)
         self._loop_counter = 0
         self._loop_fps_t = time.time()
         self._frame_idx = 0
         self.ai_module_results = {}
+        self._last_main_status = None
+        self._last_test_status = None
 
-        self.add_log(f"SISTEM BASLADI | CIHAZ: {self.compute_device}")
+        self.add_log(f"SISTEM BASLADI | CIHAZ: {self.compute_device}", cat="SISTEM", level="INFO")
         if not torch.cuda.is_available():
-            self.add_log("UYARI: PyTorch CPU modunda! GPU hizlandirma icin Jetson CUDA wheel gerekli.")
+            self.add_log("UYARI: PyTorch CPU modunda! GPU hizlandirma icin Jetson CUDA wheel gerekli.", cat="SISTEM", level="WARN")
 
         self.running = True
         threading.Thread(target=self._process_loop, daemon=True).start()
 
-    def add_log(self, msg: str):
-        ts = time.strftime("%H:%M:%S")
-        self.logs.append(f"[{ts}] {msg}")
+    def add_log(self, msg: str, cat: str = "SISTEM", level: str = "INFO"):
+        now = time.time()
+        self.logs.append({
+            "t": now,
+            "ts": time.strftime("%H:%M:%S", time.localtime(now)),
+            "cat": cat,
+            "level": level,
+            "msg": msg
+        })
+
+    def _check_stream_status_log(self, label: str, stream: "VideoChannelStream", last_attr: str):
+        prev = getattr(self, last_attr)
+        cur = stream.status
+        if cur == prev:
+            return
+        setattr(self, last_attr, cur)
+        if prev is None:
+            return
+        if cur == "ONLINE":
+            self.add_log(f"{label} KAMERA AKISI BAGLANDI", cat="KAMERA", level="INFO")
+        elif cur in ("LOS", "NO VIDEO"):
+            detail = f" - {stream.error_detail}" if stream.error_detail else ""
+            self.add_log(f"{label} KAMERA AKISI KESILDI{detail}", cat="KAMERA", level="WARN")
+        elif cur == "ERR":
+            detail = f" - {stream.error_detail}" if stream.error_detail else ""
+            self.add_log(f"{label} KAMERA HATASI{detail}", cat="KAMERA", level="ERROR")
 
     def _get_active_stream(self) -> VideoChannelStream:
         if self.active_cam_key == "WEBCAM":
@@ -576,6 +601,9 @@ class VisionSystem:
 
     def _process_loop(self):
         while self.running:
+            self._check_stream_status_log("ANA", self.main_stream, "_last_main_status")
+            self._check_stream_status_log("TEST", self.test_stream, "_last_test_status")
+
             stream = self._get_active_stream()
 
             if not stream or not stream.ret or stream.frame is None:

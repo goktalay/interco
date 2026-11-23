@@ -14,3 +14,7 @@ datasets/
 *.engine
 .vscode/
 .idea/
+models/
+models/custom/
+ai_modules_config.json
+settings.json

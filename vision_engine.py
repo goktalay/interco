@@ -1,18 +1,6 @@
-import torch
-from collections import deque
-# vision_engine.py
 import os
-import re
-import cv2
-import time
-import base64
-import subprocess
-import threading
-import numpy as np
-from ultralytics import YOLO
-from config import cfg
-from cpdd_gimbal import cpdd_ctrl
 
+# FFmpeg/OpenCV log seviyesi cv2 import edilmeden ONCE set edilmeli
 os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = (
     "rtsp_transport;tcp|"
     "fflags;nobuffer+discardcorrupt|"
@@ -21,9 +9,36 @@ os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = (
     "analyzeduration;1000000|"
     "stimeout;3000000"
 )
-os.environ["OPENCV_FFMPEG_LOGLEVEL"] = "error"
+os.environ["OPENCV_FFMPEG_LOGLEVEL"] = "quiet"
+os.environ["OPENCV_LOG_LEVEL"] = "SILENT"
 os.environ["OPENCV_VIDEOIO_PRIORITY_OBSENSOR"] = "0"
 os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"
+
+import torch
+from collections import deque
+# vision_engine.py
+import re
+import cv2
+import time
+import base64
+import subprocess
+import threading
+import numpy as np
+from config import cfg
+from cpdd_gimbal import cpdd_ctrl
+
+if os.name == "nt":
+    import ctypes
+    try:
+        ctypes.CDLL("avutil-58").av_log_set_level(-8)
+    except Exception:
+        try:
+            ctypes.CDLL("avutil-57").av_log_set_level(-8)
+        except Exception:
+            try:
+                ctypes.CDLL("avutil-56").av_log_set_level(-8)
+            except Exception:
+                pass
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
 VIDEO_EXTS = {".mp4", ".avi", ".mkv", ".mov", ".ts", ".m4v"}
@@ -60,15 +75,6 @@ def resolve_dataset_folder(folder_name: str) -> str:
             return path
     return candidates[0]
 
-TACTICAL_CLASS_LABELS = {
-    0: "TGT-PRS",
-    2: "VEH-CAR",
-    3: "VEH-MOTO",
-    4: "FW-UAV",
-    5: "VEH-BUS",
-    7: "VEH-TRK",
-    14: "AIR-TGT"
-}
 
 class SequenceFolderCapture:
     def __init__(self, folder_path: str):
@@ -298,6 +304,8 @@ class VideoChannelStream:
                         self._fps_last_t = now_f
                     if self.is_looped_media:
                         time.sleep(0.025)
+                    else:
+                        time.sleep(0.004)  # webcam için ~250fps max, CPU'yu koru
                 else:
                     if not isinstance(self.cap, SequenceFolderCapture) and self.is_looped_media and self.cap is not None:
                         self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
@@ -330,29 +338,50 @@ class VisionSystem:
 
         self.detected_targets = []
         self.latest_annotated_jpeg = None
-        self.model = None
-        self.model_status = "INIT"
-        self.current_model_name = ""
         self.compute_device = "GPU (CUDA)" if torch.cuda.is_available() else "CPU (NO-CUDA)"
         self.pipeline_fps = 0.0
         self.infer_ms = 0.0
-        self.logs = deque(maxlen=30)
+        self.logs = deque(maxlen=300)
         self._loop_counter = 0
         self._loop_fps_t = time.time()
         self._frame_idx = 0
-        self._last_cached_dets = []
+        self.ai_module_results = {}
+        self._last_main_status = None
+        self._last_test_status = None
 
-        self.add_log(f"SISTEM BASLADI | CIHAZ: {self.compute_device}")
+        self.add_log(f"SISTEM BASLADI | CIHAZ: {self.compute_device}", cat="SISTEM", level="INFO")
         if not torch.cuda.is_available():
-            self.add_log("UYARI: PyTorch CPU modunda! GPU hizlandirma icin Jetson CUDA wheel gerekli.")
+            self.add_log("UYARI: PyTorch CPU modunda! GPU hizlandirma icin Jetson CUDA wheel gerekli.", cat="SISTEM", level="WARN")
 
         self.running = True
-        threading.Thread(target=self._load_model_async, daemon=True).start()
         threading.Thread(target=self._process_loop, daemon=True).start()
 
-    def add_log(self, msg: str):
-        ts = time.strftime("%H:%M:%S")
-        self.logs.append(f"[{ts}] {msg}")
+    def add_log(self, msg: str, cat: str = "SISTEM", level: str = "INFO"):
+        now = time.time()
+        self.logs.append({
+            "t": now,
+            "ts": time.strftime("%H:%M:%S", time.localtime(now)),
+            "cat": cat,
+            "level": level,
+            "msg": msg
+        })
+
+    def _check_stream_status_log(self, label: str, stream: "VideoChannelStream", last_attr: str):
+        prev = getattr(self, last_attr)
+        cur = stream.status
+        if cur == prev:
+            return
+        setattr(self, last_attr, cur)
+        if prev is None:
+            return
+        if cur == "ONLINE":
+            self.add_log(f"{label} KAMERA AKISI BAGLANDI", cat="KAMERA", level="INFO")
+        elif cur in ("LOS", "NO VIDEO"):
+            detail = f" - {stream.error_detail}" if stream.error_detail else ""
+            self.add_log(f"{label} KAMERA AKISI KESILDI{detail}", cat="KAMERA", level="WARN")
+        elif cur == "ERR":
+            detail = f" - {stream.error_detail}" if stream.error_detail else ""
+            self.add_log(f"{label} KAMERA HATASI{detail}", cat="KAMERA", level="ERROR")
 
     def _get_active_stream(self) -> VideoChannelStream:
         if self.active_cam_key == "WEBCAM":
@@ -400,26 +429,11 @@ class VisionSystem:
             })
         return report
 
-    def _load_model_async(self):
-        model_path = cfg.data.get("yolo_model", "yolov8n.pt")
-        try:
-            self.model_status = "LOADING"
-            self.add_log(f"AI MODEL YUKLENIYOR: {model_path} ({self.compute_device})")
-            self.model = YOLO(model_path)
-            self.current_model_name = model_path
-            self.model_status = "READY"
-            self.add_log(f"AI MODEL HAZIR: {model_path}")
-        except Exception as e:
-            self.model_status = "ERR"
-            self.add_log(f"AI MODEL HATA: {e}")
 
     def reload_all(self):
         self.main_stream.trigger_reconnect()
         self.test_stream.trigger_reconnect()
         cpdd_ctrl.reload()
-        new_model = cfg.data.get("yolo_model", "yolov8n.pt")
-        if new_model != self.current_model_name:
-            threading.Thread(target=self._load_model_async, daemon=True).start()
 
     def test_cameras_and_model(self):
         rtsp_url = self.main_stream._get_source_url()
@@ -428,9 +442,17 @@ class VisionSystem:
             total = len(self.test_stream.cap.image_files) or len(self.test_stream.cap.video_files)
             test_url = f"{test_url} [{total} dosya]"
 
+        try:
+            from ai_modules import ai_module_mgr
+            active_count = sum(1 for m in ai_module_mgr.modules.values() if m.enabled and m.model is not None)
+            ai_status = "READY" if active_count > 0 else "STANDBY"
+        except Exception:
+            active_count = 0
+            ai_status = "STANDBY"
+
         return {
-            "model_ready": self.model is not None,
-            "model_status": self.model_status,
+            "model_ready": active_count > 0,
+            "model_status": ai_status,
             "cpdd_udp": cpdd_ctrl.test_connection(),
             "cameras": {
                 "MAIN_RTSP": {
@@ -581,6 +603,9 @@ class VisionSystem:
 
     def _process_loop(self):
         while self.running:
+            self._check_stream_status_log("ANA", self.main_stream, "_last_main_status")
+            self._check_stream_status_log("TEST", self.test_stream, "_last_test_status")
+
             stream = self._get_active_stream()
 
             if not stream or not stream.ret or stream.frame is None:
@@ -597,95 +622,90 @@ class VisionSystem:
             locked_target_found = False
 
             self._frame_idx += 1
-            skip_n = int(cfg.data.get("ai_frame_skip", 1))
-            if not torch.cuda.is_available() and skip_n < 2:
-                skip_n = 2  # CPU modunda her 2 karede 1 AI calistirarak goruntuyu 2x akici tut
 
-            if self.model is not None:
-                try:
-                    if (self._frame_idx % skip_n == 0) or not self._last_cached_dets:
-                        t_inf0 = time.time()
-                        imgsz_val = int(cfg.data.get("yolo_imgsz", 416))
-                        results = self.model.track(
-                            frame,
-                            persist=True,
-                            imgsz=imgsz_val,
-                            conf=float(cfg.data.get("confidence_threshold", 0.45)),
-                            classes=cfg.get_target_classes_list(),
-                            verbose=False
-                        )
-                        self.infer_ms = round((time.time() - t_inf0) * 1000.0, 1)
+            try:
+                from ai_modules import ai_module_mgr
+                t_inf0 = time.time()
+                ai_results = ai_module_mgr.process_frame(frame)
+                self.infer_ms = round((time.time() - t_inf0) * 1000.0, 1)
 
-                        detections_tmp = []
-                        if results and len(results[0].boxes) > 0:
-                            boxes = results[0].boxes
-                            for i, box in enumerate(boxes):
-                                x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
-                                conf = float(box.conf[0])
-                                cls_id = int(box.cls[0]) if box.cls is not None else -1
-                                cls_label = TACTICAL_CLASS_LABELS.get(cls_id, f"CLS-{cls_id}")
-                                track_id = int(box.id[0]) if box.id is not None else (i + 1)
-                                cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
-                                detections_tmp.append({
-                                    "x1": x1, "y1": y1, "x2": x2, "y2": y2,
-                                    "conf": conf, "id": track_id, "cx": cx, "cy": cy,
-                                    "cls_id": cls_id, "cls_label": cls_label
-                                })
-                        self._last_cached_dets = detections_tmp
-                    else:
-                        detections_tmp = self._last_cached_dets
-
-                    if len(detections_tmp) > 0:
-
-                        if self.locked_target_id is not None:
-                            ids_in_frame = [d["id"] for d in detections_tmp]
-                            if self.locked_target_id not in ids_in_frame:
-                                if self.last_locked_center is not None:
-                                    lx, ly = self.last_locked_center
-                                    closest = min(detections_tmp, key=lambda d: (d["cx"] - lx)**2 + (d["cy"] - ly)**2)
-                                else:
-                                    closest = detections_tmp[0]
-                                self.locked_target_id = closest["id"]
-
-                        for det in detections_tmp:
-                            x1, y1, x2, y2 = det["x1"], det["y1"], det["x2"], det["y2"]
-                            cx, cy = det["cx"], det["cy"]
-                            track_id, conf = det["id"], det["conf"]
-
-                            raw_boxes.append({"x1": x1, "y1": y1, "x2": x2, "y2": y2})
-                            err_x = (cx - (fw / 2)) / (fw / 2)
-
-                            tilt_deg = float(cfg.data.get("camera_tilt_deg", 30.0))
-                            vfov_deg = max(20.0, float(cfg.data.get("camera_vfov_deg", 60.0)))
-                            drone_pitch = float(self.mav.telemetry.get("pitch", 0.0))
-                            pixel_angle_y = -((cy - (fh / 2)) / (fh / 2)) * (vfov_deg / 2.0)
-                            net_target_elev_deg = pixel_angle_y + tilt_deg + drone_pitch
-                            err_y = -net_target_elev_deg / (vfov_deg / 2.0)
-
-                            is_locked = (self.locked_target_id == track_id)
-                            if is_locked:
-                                locked_target_found = True
-                                self.last_locked_center = (cx, cy)
-                                self.mav.send_intercept_attitude(err_x, err_y)
-
-                            cls_label = det.get("cls_label", "TGT")
-                            box_w_ratio = max(0.015, (x2 - x1) / float(fw))
-                            est_dist_m = round(min(450.0, max(25.0, 22.0 / box_w_ratio)), 1)
-                            self._draw_tactical_reticle(frame, x1, y1, x2, y2, track_id, conf, is_locked, cls_label, est_dist_m)
-                            current_targets.append({
+                all_detections = []
+                if ai_results:
+                    for mr in ai_results:
+                        mid = mr["module_id"]
+                        self.ai_module_results[mid] = {
+                            "count": len(mr["detections"]),
+                            "fps": round(self.pipeline_fps, 1),
+                            "infer_ms": round(self.infer_ms, 1),
+                        }
+                        for det in mr["detections"]:
+                            x1, y1, x2, y2 = det["bbox"]
+                            cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+                            track_id = det.get("track_id", 0)
+                            all_detections.append({
+                                "x1": x1, "y1": y1, "x2": x2, "y2": y2,
+                                "conf": det["confidence"],
                                 "id": track_id,
-                                "cls_label": cls_label,
-                                "conf": round(conf * 100, 1),
-                                "locked": is_locked,
-                                "cx": cx,
-                                "cy": cy,
-                                "est_dist_m": est_dist_m,
-                                "thumbnail": self._encode_crop_base64(frame, x1, y1, x2, y2),
-                                "err_x": round(err_x, 2),
-                                "err_y": round(err_y, 2)
+                                "cx": cx, "cy": cy,
+                                "cls_label": det["label"].upper()[:8],
+                                "module_id": mid,
                             })
-                except Exception:
-                    pass
+
+                active_ids = [m.id for m in ai_module_mgr.modules.values() if m.enabled and m.model is not None]
+                for mid in list(self.ai_module_results.keys()):
+                    if mid not in active_ids:
+                        del self.ai_module_results[mid]
+
+                if len(all_detections) > 0:
+                    if self.locked_target_id is not None:
+                        ids_in_frame = [d["id"] for d in all_detections]
+                        if self.locked_target_id not in ids_in_frame:
+                            if self.last_locked_center is not None:
+                                lx, ly = self.last_locked_center
+                                closest = min(all_detections, key=lambda d: (d["cx"] - lx)**2 + (d["cy"] - ly)**2)
+                            else:
+                                closest = all_detections[0]
+                            self.locked_target_id = closest["id"]
+
+                    for det in all_detections:
+                        x1, y1, x2, y2 = det["x1"], det["y1"], det["x2"], det["y2"]
+                        cx, cy = det["cx"], det["cy"]
+                        track_id, conf = det["id"], det["conf"]
+
+                        raw_boxes.append({"x1": x1, "y1": y1, "x2": x2, "y2": y2})
+                        err_x = (cx - (fw / 2)) / (fw / 2)
+
+                        tilt_deg = float(cfg.data.get("camera_tilt_deg", 30.0))
+                        vfov_deg = max(20.0, float(cfg.data.get("camera_vfov_deg", 60.0)))
+                        drone_pitch = float(self.mav.telemetry.get("pitch", 0.0))
+                        pixel_angle_y = -((cy - (fh / 2)) / (fh / 2)) * (vfov_deg / 2.0)
+                        net_target_elev_deg = pixel_angle_y + tilt_deg + drone_pitch
+                        err_y = -net_target_elev_deg / (vfov_deg / 2.0)
+
+                        is_locked = (self.locked_target_id == track_id)
+                        if is_locked:
+                            locked_target_found = True
+                            self.last_locked_center = (cx, cy)
+                            self.mav.send_intercept_attitude(err_x, err_y)
+
+                        cls_label = det.get("cls_label", "TGT")
+                        box_w_ratio = max(0.015, (x2 - x1) / float(fw))
+                        est_dist_m = round(min(450.0, max(25.0, 22.0 / box_w_ratio)), 1)
+                        self._draw_tactical_reticle(frame, x1, y1, x2, y2, track_id, conf, is_locked, cls_label, est_dist_m)
+                        current_targets.append({
+                            "id": track_id,
+                            "cls_label": cls_label,
+                            "conf": round(conf * 100, 1),
+                            "locked": is_locked,
+                            "cx": cx,
+                            "cy": cy,
+                            "est_dist_m": est_dist_m,
+                            "thumbnail": self._encode_crop_base64(frame, x1, y1, x2, y2),
+                            "err_x": round(err_x, 2),
+                            "err_y": round(err_y, 2)
+                        })
+            except Exception:
+                pass
 
             if self.locked_target_id is not None and not locked_target_found and self.last_locked_center:
                 lx, ly = self.last_locked_center

@@ -121,12 +121,11 @@ def _default_builtin_modules():
         {
             "id": "aircraft",
             "name": "Hava Aracı Tanıma",
-            "description": "İnsansız hava araçları (drone) ve uçak tespiti",
-            "model_file": "yolov8n-drone.pt",
+            "description": "Uçak, helikopter, drone ve hava araçları tespiti",
+            "model_file": "yolov8s.pt",
             "model_type": "yolo",
-            "classes": None,
-            "default_conf": 0.30,
-            "custom_url": "https://huggingface.co/keremberke/yolov8n-aerial-object-detection/resolve/main/best.pt",
+            "classes": [4, 17],
+            "default_conf": 0.25,
             "builtin": True,
         },
         {

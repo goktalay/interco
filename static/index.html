@@ -1169,7 +1169,8 @@ ws.onmessage = (event) => {
   const lockedObj = (data.targets || []).find(item => item.locked) || null;
   const engagedNow = Boolean(t.engaged || data.locked_target_id !== null);
 
-  updateCesiumDroneFromTelemetry(hudState.lat, hudState.lon, hudState.targetAlt, hudState.targetYaw, hudState.targetPitch, hudState.targetSpeed, hudState.homeLat, hudState.homeLon, engagedNow, lockedObj);
+  // Cesium haritasina GERCEK telemetri ver (smooth interpolation harita'da drone'u "kaydirir")
+  updateCesiumDroneFromTelemetry(hudState.lat, hudState.lon, t.alt, t.yaw, t.pitch, t.groundspeed, hudState.homeLat, hudState.homeLon, engagedNow, lockedObj);
   updateTakeoffLandButtons();
 
   /* no-signal banner */

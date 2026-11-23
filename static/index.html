@@ -453,6 +453,7 @@ select option:checked,select option:hover{background:var(--accent);color:#04160a
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
           SINYAL YOK
           <span id="ns-cam"></span>
+          <span id="ns-err" style="color:var(--red);font-size:9px;max-width:360px;text-align:center;"></span>
         </div>
         <div id="targets-dock"></div>
         <button id="btn-abort-engagement" onclick="abortEngagement()">⬛ ANGAJMANI İPTAL</button>
@@ -1142,6 +1143,8 @@ ws.onmessage = (event) => {
   if (!data.active_cam_online) {
     noSigBanner.classList.add("show");
     document.getElementById("ns-cam").innerText = `${data.active_camera} (${data.active_cam_status})`;
+    const nsErr = document.getElementById("ns-err");
+    if (nsErr) nsErr.innerText = data.active_cam_error || "";
   } else {
     noSigBanner.classList.remove("show");
   }

@@ -1,17 +1,6 @@
-import torch
-from collections import deque
-# vision_engine.py
 import os
-import re
-import cv2
-import time
-import base64
-import subprocess
-import threading
-import numpy as np
-from config import cfg
-from cpdd_gimbal import cpdd_ctrl
 
+# FFmpeg/OpenCV log seviyesi cv2 import edilmeden ONCE set edilmeli
 os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = (
     "rtsp_transport;tcp|"
     "fflags;nobuffer+discardcorrupt|"
@@ -24,6 +13,19 @@ os.environ["OPENCV_FFMPEG_LOGLEVEL"] = "quiet"
 os.environ["OPENCV_LOG_LEVEL"] = "SILENT"
 os.environ["OPENCV_VIDEOIO_PRIORITY_OBSENSOR"] = "0"
 os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"
+
+import torch
+from collections import deque
+# vision_engine.py
+import re
+import cv2
+import time
+import base64
+import subprocess
+import threading
+import numpy as np
+from config import cfg
+from cpdd_gimbal import cpdd_ctrl
 
 if os.name == "nt":
     import ctypes

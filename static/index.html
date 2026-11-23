@@ -1,549 +1,473 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>INTERCO // 7" TACTICAL TOUCH GCS</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>INTERCO GCS</title>
 <script src="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Cesium.js"></script>
 <link href="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 <style>
-  :root {
-    --hud-green: #39ff5a;
-    --hud-glow: 0 0 4px rgba(57, 255, 90, 0.5);
-    --hud-amber: #ffaa00;
-    --hud-red: #ff2e2e;
-    --hud-cyan: #38bdf8;
-    --border-subtle: rgba(57, 255, 90, 0.4);
-    --font-hud: 'Consolas', 'Lucida Console', 'Roboto Mono', monospace;
-  }
+:root {
+  --accent: #39ff5a;
+  --cyan: #00d4ff;
+  --amber: #ffb340;
+  --red: #ff3b30;
+  --purple: #bf5af2;
+  --bg: #0b0e0d;
+  --bg2: #111614;
+  --bg3: #161c19;
+  --bg4: rgba(13,19,16,0.96);
+  --glass: rgba(11,18,14,0.88);
+  --text: #d4e8da;
+  --text2: rgba(180,210,190,0.65);
+  --text3: rgba(140,175,155,0.42);
+  --border: rgba(57,255,90,0.14);
+  --border2: rgba(57,255,90,0.26);
+  --sh: 0 2px 20px rgba(0,0,0,0.7);
+  --r: 5px;
+  --sb: 52px;
+}
+*{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-tap-highlight-color:transparent;}
+html,body{width:100vw;height:100vh;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Consolas','JetBrains Mono',monospace;}
 
-  * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-  }
+/* ── SIDEBAR ── */
+#sidebar{
+  position:fixed;left:0;top:0;bottom:0;width:var(--sb);z-index:300;
+  background:rgba(9,13,11,0.97);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;align-items:center;padding:0;
+}
+.sb-logo{
+  width:100%;padding:10px 0 8px;text-align:center;
+  font-size:9px;font-weight:900;letter-spacing:2px;color:var(--accent);
+  border-bottom:1px solid var(--border);margin-bottom:6px;line-height:1.3;
+}
+.sb-btn{
+  width:44px;height:44px;margin:1px 0;border-radius:var(--r);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  background:none;border:1px solid transparent;cursor:pointer;
+  color:var(--text2);transition:all .15s;
+}
+.sb-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;flex-shrink:0;}
+.sb-btn span{font-size:7px;font-weight:700;letter-spacing:.5px;line-height:1;}
+.sb-btn:hover{color:var(--accent);border-color:var(--border2);background:rgba(57,255,90,.08);}
+.sb-btn.active{color:var(--accent);border-color:var(--border2);background:rgba(57,255,90,.12);}
+.sb-sep{width:28px;height:1px;background:var(--border);margin:5px 0;}
+.sb-end{margin-top:auto;display:flex;flex-direction:column;align-items:center;padding-bottom:8px;}
 
-  body {
-    background: #040705;
-    color: var(--hud-green);
-    font-family: var(--font-hud);
-    overflow: hidden;
-    width: 100vw;
-    height: 100vh;
-    touch-action: manipulation;
-  }
+/* ── APP GRID ── */
+#app{
+  position:fixed;left:var(--sb);right:0;top:0;bottom:0;
+  display:grid;
+  grid-template-rows:46px 1fr 46px;
+}
 
-  .view-fullscreen {
-    position: fixed !important;
-    inset: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    z-index: 1 !important;
-    border: none !important;
-  }
+/* ── TOP BAR ── */
+#top-bar{
+  grid-row:1;
+  display:flex;align-items:stretch;
+  background:rgba(9,13,11,0.97);
+  border-bottom:1px solid var(--border);
+  overflow:hidden;
+}
+.tb-brand{
+  display:flex;align-items:center;padding:0 14px;
+  border-right:1px solid var(--border);
+  color:var(--accent);font-size:11px;font-weight:900;letter-spacing:2px;
+  flex-shrink:0;
+}
+.tb-cells{display:flex;flex:1;overflow:hidden;}
+.tb-cell{
+  display:flex;flex-direction:column;justify-content:center;
+  padding:0 12px;border-right:1px solid var(--border);
+  min-width:0;flex-shrink:0;
+}
+.tb-cell-label{font-size:8px;font-weight:700;letter-spacing:1px;color:var(--text3);text-transform:uppercase;line-height:1;margin-bottom:3px;}
+.tb-cell-val{font-size:12px;font-weight:700;letter-spacing:.5px;color:var(--text);line-height:1;white-space:nowrap;}
+.tb-cell-val.ok{color:var(--accent);}
+.tb-cell-val.warn{color:var(--amber);}
+.tb-cell-val.err{color:var(--red);}
+.tb-cell-val.engaged{color:var(--red);animation:blink .6s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.4;}}
+.tb-time{
+  margin-left:auto;display:flex;align-items:center;padding:0 12px;
+  font-size:11px;font-weight:700;letter-spacing:1px;color:var(--text2);
+  border-left:1px solid var(--border);flex-shrink:0;
+}
 
-  .view-pip {
-    position: fixed !important;
-    top: 48px !important;
-    right: 10px !important;
-    width: 225px !important;
-    height: 138px !important;
-    z-index: 15 !important;
-    border: 1.5px solid var(--hud-green) !important;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.88) !important;
-    background: #030705 !important;
-    overflow: hidden !important;
-    cursor: pointer;
-  }
+/* ── VIEWS ── */
+#views{
+  grid-row:2;
+  display:flex;overflow:hidden;position:relative;
+}
+#camera-wrap{
+  flex:60;min-width:0;position:relative;overflow:hidden;
+  border-right:1px solid var(--border);
+}
+#camera-stage{
+  position:absolute;inset:0;overflow:hidden;background:#000;
+}
+#video-stream{width:100%;height:100%;object-fit:contain;display:block;}
+#hud-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+#no-signal-banner{
+  display:none;position:absolute;inset:0;
+  background:rgba(0,0,0,.7);
+  flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  color:var(--amber);font-size:13px;font-weight:700;letter-spacing:2px;z-index:5;
+}
+#no-signal-banner.show{display:flex;}
+#ns-cam{font-size:10px;color:var(--text3);}
+#targets-dock{
+  position:absolute;bottom:0;left:0;right:0;
+  display:flex;flex-direction:row;gap:6px;padding:6px 8px;
+  background:linear-gradient(0deg,rgba(0,0,0,.7) 0,transparent 100%);
+  overflow-x:auto;z-index:6;
+}
+#btn-abort-engagement{
+  display:none;position:absolute;top:10px;right:10px;z-index:10;
+  padding:7px 14px;font-size:11px;font-weight:800;letter-spacing:1px;
+  background:rgba(255,59,48,.15);border:1.5px solid var(--red);
+  color:var(--red);border-radius:var(--r);cursor:pointer;
+}
+#btn-abort-engagement:hover{background:rgba(255,59,48,.3);}
 
-  #camera-stage { background: #040705; }
-  #video-stream {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    z-index: 1;
-  }
-  #hud-canvas {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 2;
-    pointer-events: none;
-  }
+/* target pods */
+.target-pod{
+  flex-shrink:0;width:100px;border-radius:var(--r);overflow:hidden;cursor:pointer;
+  border:1.5px solid var(--border2);background:rgba(0,0,0,.6);
+  transition:all .15s;
+}
+.target-pod:hover{border-color:var(--cyan);transform:translateY(-2px);}
+.target-pod.locked{border-color:var(--red);box-shadow:0 0 10px rgba(255,59,48,.3);}
+.target-pod img{width:100%;height:62px;object-fit:cover;display:block;}
+.pod-meta{padding:3px 5px;display:flex;justify-content:space-between;font-size:9px;color:var(--text2);}
+.pod-action{padding:3px 5px;text-align:center;font-size:9px;font-weight:700;letter-spacing:.5px;color:var(--cyan);border-top:1px solid var(--border);}
+.target-pod.locked .pod-action{color:var(--red);}
 
-  #map-stage { background: #050a0e; }
-  #cesium-container { width: 100%; height: 100%; }
-  .cesium-viewer-bottom { display: none !important; }
+#map-wrap{
+  flex:40;min-width:0;position:relative;overflow:hidden;
+}
+#cesium-container{position:absolute;inset:0;width:100%;height:100%;}
+.cesium-viewer-bottom,.cesium-credit-container,.cesium-viewer-toolbar{display:none!important;}
 
-  .pip-badge {
-    display: none;
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 26px;
-    padding: 0 8px;
-    background: rgba(2, 8, 5, 0.85);
-    border-bottom: 1px solid rgba(57, 255, 90, 0.35);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.8px;
-    color: var(--hud-green);
-    z-index: 6;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .view-pip .pip-badge { display: flex; }
+/* view divider drag */
+#view-divider{
+  width:5px;flex-shrink:0;cursor:col-resize;
+  background:transparent;position:relative;z-index:10;
+}
+#view-divider:hover{background:rgba(57,255,90,.2);}
+#view-divider::after{
+  content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:3px;height:40px;border-radius:2px;background:var(--border2);
+}
 
-  .cpdd-optics-bar {
-    position: fixed;
-    top: 192px;
-    right: 10px;
-    width: 225px;
-    display: flex;
-    gap: 4px;
-    z-index: 16;
-    pointer-events: auto;
-  }
-  .cpdd-optics-bar .tac-btn {
-    flex: 1;
-    min-height: 32px;
-    padding: 0 4px;
-    font-size: 10px;
-    background: rgba(4, 12, 7, 0.88);
-  }
+/* ── BOTTOM BAR ── */
+#bottom-bar{
+  grid-row:3;
+  display:flex;align-items:center;gap:0;
+  background:rgba(9,13,11,0.97);
+  border-top:1px solid var(--border);overflow:hidden;
+}
+.bb-group{
+  display:flex;align-items:center;gap:5px;
+  padding:0 10px;border-right:1px solid var(--border);height:100%;
+}
+.bb-group:last-child{border-right:none;margin-left:auto;}
+.tac-btn{
+  padding:5px 10px;font-size:10px;font-weight:700;letter-spacing:.5px;
+  font-family:inherit;background:transparent;
+  border:1px solid var(--border2);border-radius:var(--r);
+  color:var(--accent);cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.tac-btn:hover{background:rgba(57,255,90,.12);border-color:var(--accent);}
+.tac-btn.active{background:rgba(57,255,90,.18);border-color:var(--accent);color:var(--accent);}
+.tac-btn.webcam-btn{color:var(--text3);border-color:var(--border);}
+.mode-select{
+  font-family:inherit;font-size:10px;font-weight:700;letter-spacing:.5px;
+  background:var(--bg3);color:var(--accent);border:1px solid var(--border2);
+  border-radius:var(--r);padding:4px 6px;cursor:pointer;height:30px;
+}
+.bb-label{font-size:8px;font-weight:700;letter-spacing:1px;color:var(--text3);}
 
-  .pip-expand-btn {
-    background: rgba(57, 255, 90, 0.2);
-    border: 1px solid var(--hud-green);
-    color: var(--hud-green);
-    font-family: var(--font-hud);
-    font-size: 10px;
-    font-weight: 800;
-    padding: 2px 7px;
-    cursor: pointer;
-  }
+/* ── FLOATING PANELS ── */
+.fp{
+  display:none;position:fixed;z-index:200;flex-direction:column;
+  background:var(--bg4);backdrop-filter:blur(18px);
+  border:1px solid var(--border2);border-radius:var(--r);
+  box-shadow:var(--sh);min-width:180px;min-height:80px;overflow:hidden;
+}
+.fp.open{display:flex;}
+.fp-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;background:rgba(0,0,0,.3);
+  border-bottom:1px solid var(--border);cursor:move;flex-shrink:0;
+}
+.fp-title{font-size:10px;font-weight:800;letter-spacing:1.2px;color:var(--accent);}
+.fp-close{background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:0 2px;line-height:1;}
+.fp-close:hover{color:var(--red);}
+.fp-body{flex:1;overflow:auto;}
+.fp-resize{position:absolute;right:0;bottom:0;width:14px;height:14px;cursor:se-resize;background:linear-gradient(135deg,transparent 50%,var(--border2) 50%);}
 
-  #no-signal-banner {
-    display: none;
-    position: absolute;
-    top: 16%;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 6px 14px;
-    background: rgba(12, 8, 6, 0.88);
-    border: 1px solid var(--hud-amber);
-    color: var(--hud-amber);
-    font-size: 11px;
-    letter-spacing: 1px;
-    text-align: center;
-    z-index: 4;
-    pointer-events: none;
-  }
-  .view-pip #no-signal-banner {
-    top: 44%;
-    font-size: 9px;
-    padding: 3px 6px;
-  }
+/* connection panel */
+#panel-connection{left:62px;top:56px;width:320px;}
+.cp-row{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid rgba(57,255,90,.07);}
+.cp-row:last-child{border-bottom:none;}
+.cp-lbl{font-size:9px;font-weight:700;letter-spacing:.8px;color:var(--text3);min-width:72px;}
+.cp-val{font-size:11px;font-weight:600;color:var(--text);font-family:inherit;}
+.cp-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;border:1px solid;}
+.cp-badge.ok{color:var(--accent);border-color:rgba(57,255,90,.4);background:rgba(57,255,90,.08);}
+.cp-badge.warn{color:var(--amber);border-color:rgba(255,179,64,.4);background:rgba(255,179,64,.08);}
+.cp-badge.err{color:var(--red);border-color:rgba(255,59,48,.4);background:rgba(255,59,48,.08);}
 
-  .top-bar {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    height: 42px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 10px;
-    background: linear-gradient(180deg, rgba(2, 6, 4, 0.9) 0%, rgba(2, 6, 4, 0.2) 100%);
-    z-index: 20;
-    pointer-events: auto;
-  }
-  .sys-title {
-    font-weight: 800;
-    font-size: 14px;
-    letter-spacing: 2px;
-    text-shadow: var(--hud-glow);
-  }
-  .top-status-group {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
+/* log panel */
+#panel-log{left:62px;bottom:56px;width:480px;max-height:320px;}
+#live-log-drawer{padding:6px 10px;}
+#live-log-lines>div{font-size:9px;line-height:1.6;color:var(--text2);border-bottom:1px solid rgba(57,255,90,.05);padding:1px 0;}
+#log-perf-summary{padding:5px 12px;font-size:9px;color:var(--text3);border-bottom:1px solid var(--border);flex-shrink:0;}
 
-  #fps-indicator {
-    font-size: 10px;
-    padding: 6px 8px;
-    background: rgba(4, 10, 6, 0.82);
-    border: 1px solid var(--hud-cyan);
-    color: var(--hud-cyan);
-    letter-spacing: 0.5px;
-    font-weight: 800;
-  }
-  #live-log-drawer {
-    display: none;
-    position: fixed;
-    top: 48px;
-    left: 10px;
-    width: 440px;
-    max-width: 92vw;
-    max-height: 220px;
-    background: rgba(3, 8, 6, 0.90);
-    border: 1px solid var(--hud-cyan);
-    padding: 8px 10px;
-    z-index: 25;
-    font-size: 10px;
-    line-height: 1.45;
-    color: #d8f8e5;
-    overflow-y: auto;
-    pointer-events: auto;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.85);
-  }
-  .log-hdr {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid rgba(56, 189, 248, 0.35);
-    padding-bottom: 4px;
-    margin-bottom: 5px;
-    color: var(--hud-cyan);
-    font-weight: 800;
-  }
+/* settings + AI floating */
+#settings-modal{left:62px;top:56px;width:620px;max-height:calc(100vh - 70px);}
+#ai-modules-modal{left:62px;top:56px;width:650px;max-height:calc(100vh - 70px);}
 
-  .hud-tag {
-    font-size: 10px;
-    padding: 6px 8px;
-    background: rgba(4, 10, 6, 0.78);
-    border: 1px solid var(--border-subtle);
-    letter-spacing: 0.6px;
-  }
+/* ── SETTINGS CONTENT ── */
+.settings-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);flex-shrink:0;}
+.settings-tab{
+  padding:8px 14px;font-size:9px;font-weight:800;letter-spacing:.8px;font-family:inherit;
+  background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;
+  color:var(--text3);transition:all .15s;white-space:nowrap;
+}
+.settings-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.settings-tab:hover{color:var(--text);}
+.settings-tab-content{display:none;padding:14px;}
+.settings-tab-content.active{display:block;}
+.sec-hdr{font-size:9px;font-weight:800;letter-spacing:1.5px;color:var(--text3);padding:0 0 8px;border-bottom:1px solid var(--border);margin-bottom:10px;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.fld{display:flex;flex-direction:column;gap:4px;}
+.fld label{font-size:9px;font-weight:700;letter-spacing:.5px;color:var(--text3);}
+.fld small{font-size:9px;color:var(--text3);line-height:1.4;}
+.fld input,.fld select,.fld textarea{
+  font-family:inherit;font-size:11px;background:var(--bg3);
+  color:var(--text);border:1px solid var(--border2);border-radius:var(--r);
+  padding:6px 8px;outline:none;
+}
+.fld input:focus,.fld select:focus{border-color:var(--accent);background:rgba(57,255,90,.05);}
+.input-with-btn{display:flex;gap:4px;align-items:stretch;}
+.input-with-btn input{flex:1;}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;padding:12px;border-top:1px solid var(--border);}
+#test-report{padding:10px 14px;font-size:10px;line-height:1.6;color:var(--text2);}
 
-  #targets-dock {
-    position: fixed;
-    bottom: 58px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 10px;
-    z-index: 20;
-    pointer-events: auto;
-    max-width: 96vw;
-    overflow-x: auto;
-  }
-  .target-pod {
-    width: 118px;
-    flex-shrink: 0;
-    background: rgba(4, 12, 7, 0.9);
-    border: 1.5px solid var(--hud-green);
-    padding: 4px;
-    cursor: pointer;
-    position: relative;
-  }
-  .target-pod.locked {
-    border: 2px solid var(--hud-red);
-    background: rgba(65, 6, 6, 0.94);
-    box-shadow: 0 0 16px rgba(255, 46, 46, 0.8);
-  }
-  .target-pod img {
-    width: 100%;
-    height: 66px;
-    object-fit: cover;
-    display: block;
-    border: 1px solid rgba(57, 255, 90, 0.25);
-    margin-bottom: 3px;
-    pointer-events: none;
-  }
-  .pod-meta {
-    display: flex;
-    justify-content: space-between;
-    font-size: 10px;
-    font-weight: 700;
-    color: #fff;
-    pointer-events: none;
-  }
-  .pod-action {
-    margin-top: 3px;
-    font-size: 10px;
-    text-align: center;
-    padding: 4px 0;
-    background: rgba(57, 255, 90, 0.22);
-    color: var(--hud-green);
-    letter-spacing: 0.8px;
-    font-weight: 800;
-    pointer-events: none;
-  }
-  .target-pod.locked .pod-action {
-    background: var(--hud-red);
-    color: #fff;
-  }
+/* ── TAKEOFF MODAL ── */
+#takeoff-modal{
+  display:none;position:fixed;inset:0;z-index:500;
+  background:rgba(0,0,0,.7);backdrop-filter:blur(6px);
+  align-items:center;justify-content:center;
+}
+#takeoff-modal.open{display:flex;}
+.takeoff-box{
+  background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r);
+  padding:20px;width:320px;display:flex;flex-direction:column;gap:14px;
+}
+.takeoff-box h3{font-size:12px;font-weight:800;letter-spacing:1px;color:var(--accent);}
+.takeoff-presets{display:flex;gap:6px;}
+.takeoff-presets .tac-btn{flex:1;}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;}
 
-  .bottom-bar {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    height: 52px;
-    padding: 0 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: linear-gradient(0deg, rgba(2, 6, 4, 0.95) 0%, rgba(2, 6, 4, 0.45) 100%);
-    z-index: 20;
-    pointer-events: auto;
-  }
+/* ── AI MODULES ── */
+.ai-modal-panel{padding:0;}
+.ai-modules-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;padding:10px 14px;}
+.ai-module-card{
+  background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);
+  padding:10px;display:flex;flex-direction:column;gap:7px;
+}
+.ai-module-card.active{border-color:rgba(57,255,90,.4);background:rgba(57,255,90,.05);}
+.ai-module-card.downloading{border-color:rgba(0,212,255,.3);}
+.ai-module-card.error{border-color:rgba(255,59,48,.3);}
+.ai-card-header{display:flex;align-items:center;justify-content:space-between;gap:6px;}
+.ai-card-name{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text);}
+.ai-toggle{position:relative;display:inline-block;width:32px;height:17px;flex-shrink:0;}
+.ai-toggle input{opacity:0;width:0;height:0;position:absolute;}
+.ai-toggle-track{
+  position:absolute;inset:0;border-radius:17px;cursor:pointer;
+  background:var(--bg);border:1px solid var(--border2);transition:.2s;
+}
+.ai-toggle input:checked+.ai-toggle-track{background:rgba(57,255,90,.2);border-color:var(--accent);}
+.ai-toggle-track::before{
+  content:'';position:absolute;width:11px;height:11px;bottom:2px;left:2px;
+  border-radius:50%;background:var(--text3);transition:.2s;
+}
+.ai-toggle input:checked+.ai-toggle-track::before{transform:translateX(15px);background:var(--accent);}
+.ai-toggle input:disabled+.ai-toggle-track{opacity:.4;cursor:not-allowed;}
+.ai-status{font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;}
+.st-active{color:var(--accent);background:rgba(57,255,90,.1);}
+.st-ready{color:var(--cyan);background:rgba(0,212,255,.1);}
+.st-downloading{color:var(--amber);background:rgba(255,179,64,.1);}
+.st-needs-install{color:var(--amber);background:rgba(255,179,64,.1);}
+.st-error{color:var(--red);background:rgba(255,59,48,.1);}
+.st-none{color:var(--text3);background:rgba(255,255,255,.05);}
+.ai-results-badge{font-size:9px;color:var(--text3);}
+.ai-results-badge.has-results{color:var(--accent);font-weight:700;}
+.ai-dl-btn{
+  font-family:inherit;font-size:9px;font-weight:700;letter-spacing:.5px;
+  padding:3px 7px;border-radius:3px;border:1px solid var(--border2);
+  background:transparent;color:var(--cyan);cursor:pointer;
+}
+.ai-dl-btn:hover{background:rgba(0,212,255,.1);}
+.ai-dl-btn.del-btn{color:var(--red);border-color:rgba(255,59,48,.3);}
+.ai-dl-btn:disabled{opacity:.4;cursor:not-allowed;}
+.ai-slider-row{display:flex;flex-direction:column;gap:3px;}
+.ai-slider-label{font-size:9px;color:var(--text3);}
+.ai-slider{width:100%;accent-color:var(--accent);height:3px;}
+.ai-progress-bar{flex:1;height:12px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:6px;position:relative;overflow:hidden;display:none;}
+.ai-progress-bar.visible{display:block;}
+.ai-progress-fill{position:absolute;inset:0;width:0;background:linear-gradient(90deg,var(--cyan),var(--accent));transition:width .3s;}
+.ai-progress-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--text);}
+.ai-custom-form{display:none;padding:12px 14px;border-top:1px solid var(--border);background:var(--bg3);}
+.ai-custom-form.visible{display:block;}
+.ai-add-btn-row{padding:0 14px 10px;display:flex;gap:6px;}
+.ai-results-panel{padding:10px 14px;display:flex;flex-direction:column;gap:4px;min-height:40px;}
+.ai-result-stat{display:flex;justify-content:space-between;padding:4px 8px;background:var(--bg3);border-radius:3px;}
+.stat-name{font-size:10px;color:var(--text2);}
+.stat-vals{font-size:9px;color:var(--accent);font-weight:700;}
+.profile-save-row{display:flex;gap:6px;padding:6px 14px;}
+.profile-save-row input{flex:1;font-family:inherit;font-size:10px;padding:5px 8px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);}
+.profile-item{display:flex;align-items:center;gap:6px;padding:4px 14px;border-bottom:1px solid var(--border);}
+.profile-name{flex:1;font-size:10px;color:var(--text);}
+.folder-create-row{display:flex;gap:6px;padding:6px 14px;}
+.folder-create-row input{flex:1;font-family:inherit;font-size:10px;padding:5px 8px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);}
+.folders-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px 14px;}
+.folder-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px;}
+.folder-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.folder-name{font-size:10px;font-weight:700;color:var(--text);}
+.folder-cameras{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;}
+.folder-cam-tag{font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(0,212,255,.1);color:var(--cyan);border:1px solid rgba(0,212,255,.2);}
+.folder-cam-remove{background:none;border:none;color:var(--red);cursor:pointer;font-size:10px;padding:0 2px;}
+.folder-add-cam{display:flex;gap:4px;align-items:center;}
 
-  .sensor-group, .bottom-flight-group {
-    display: flex;
-    gap: 5px;
-    align-items: center;
-  }
-
-  .tac-btn {
-    background: rgba(6, 14, 9, 0.88);
-    color: var(--hud-green);
-    border: 1px solid var(--border-subtle);
-    min-height: 38px;
-    padding: 0 10px;
-    font-family: var(--font-hud);
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.6px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .tac-btn:active {
-    transform: scale(0.97);
-  }
-  .tac-btn.active {
-    background: var(--hud-green);
-    color: #030704;
-    border-color: var(--hud-green);
-  }
-  .tac-btn.webcam-btn {
-    border-color: rgba(56, 189, 248, 0.5);
-    color: var(--hud-cyan);
-  }
-  .tac-btn.webcam-btn.active {
-    background: var(--hud-cyan);
-    color: #030704;
-    border-color: var(--hud-cyan);
-  }
-
-  #btn-abort-engagement {
-    display: none;
-    background: var(--hud-red);
-    color: #ffffff;
-    border: 1.5px solid #ff8a84;
-    min-height: 38px;
-    padding: 0 12px;
-    font-family: var(--font-hud);
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.8px;
-    cursor: pointer;
-    box-shadow: 0 0 16px rgba(255, 46, 46, 0.8);
-    animation: pulse-red 0.7s infinite;
-  }
-  @keyframes pulse-red { 50% { opacity: 0.5; } }
-
-  .mode-select {
-    background: rgba(6, 14, 9, 0.94);
-    color: var(--hud-green);
-    border: 1px solid var(--hud-green);
-    height: 38px;
-    padding: 0 8px;
-    font-family: var(--font-hud);
-    font-size: 11px;
-    font-weight: 800;
-    cursor: pointer;
-    outline: none;
-  }
-  .mode-select option {
-    background: #070d0b;
-    color: var(--hud-green);
-  }
-
-  #bottom-mode-display {
-    padding: 0 12px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    background: rgba(4, 12, 7, 0.92);
-    border: 1px solid var(--hud-green);
-    color: var(--hud-green);
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 1.2px;
-    text-shadow: var(--hud-glow);
-    pointer-events: none;
-    white-space: nowrap;
-  }
-  #bottom-mode-display.engaged {
-    border-color: var(--hud-red);
-    background: rgba(65, 6, 6, 0.94);
-    color: #ff6b63;
-    animation: pulse-red 0.7s infinite;
-  }
-
-  #takeoff-modal, #settings-modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(2, 5, 4, 0.86);
-    z-index: 45;
-    justify-content: center;
-    align-items: center;
-    backdrop-filter: blur(4px);
-  }
-  .takeoff-box {
-    width: 340px;
-    max-width: 92vw;
-    background: #070d0b;
-    border: 1.5px solid var(--hud-cyan);
-    padding: 16px;
-  }
-  .takeoff-box h3 {
-    font-size: 13px;
-    letter-spacing: 1.5px;
-    color: var(--hud-cyan);
-    margin-bottom: 10px;
-    border-bottom: 1px solid rgba(56, 189, 248, 0.3);
-    padding-bottom: 6px;
-  }
-  .takeoff-presets {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
-    margin-top: 8px;
-  }
-
-  .modal-panel {
-    width: 94vw;
-    max-width: 780px;
-    max-height: 90vh;
-    overflow-y: auto;
-    background: #070d0b;
-    border: 1px solid var(--hud-green);
-    padding: 14px;
-  }
-  .modal-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid var(--border-subtle);
-    padding-bottom: 8px;
-    margin-bottom: 10px;
-  }
-  .modal-top h2 { font-size: 13px; letter-spacing: 1.5px; color: #fff; }
-  .sec-hdr {
-    font-size: 10px;
-    color: var(--hud-amber);
-    letter-spacing: 1.2px;
-    margin: 10px 0 6px 0;
-    border-left: 2px solid var(--hud-amber);
-    padding-left: 6px;
-  }
-  .form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-  .form-grid-3 {
-    display: grid;
-    grid-template-columns: 1.2fr 1.1fr 0.7fr;
-    gap: 8px;
-  }
-  .fld { display: flex; flex-direction: column; gap: 3px; }
-  .fld label { font-size: 10px; color: rgba(210, 235, 220, 0.85); }
-  .fld input, .fld select {
-    background: #030605;
-    border: 1px solid var(--border-subtle);
-    color: #fff;
-    height: 36px;
-    padding: 0 8px;
-    font-family: var(--font-hud);
-    font-size: 12px;
-    user-select: text;
-    width: 100%;
-  }
-  .fld input:disabled { opacity: 0.45; }
-  .fld small { font-size: 9px; color: rgba(160, 190, 175, 0.65); }
-
-  .input-with-btn { display: flex; gap: 6px; }
-
-  #test-report {
-    display: none;
-    margin-top: 10px;
-    padding: 10px;
-    background: #040907;
-    border: 1px solid var(--hud-green);
-    font-size: 11px;
-    line-height: 1.6;
-    color: #e0f5ea;
-  }
-  .modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    margin-top: 12px;
-    padding-top: 10px;
-    border-top: 1px solid var(--border-subtle);
-  }
+/* scrollbar */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
 </style>
 </head>
 <body>
 
-  <div id="camera-stage" class="view-fullscreen" ondblclick="handleStageDoubleClick('camera')">
-    <div class="pip-badge" onclick="setLayoutMode(false)">
-      <span>KAMERA + HUD</span>
-      <button type="button" class="pip-expand-btn">BÜYÜT</button>
+<!-- ══════════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════════ -->
+<nav id="sidebar">
+  <div class="sb-logo">INT<br>CO</div>
+  <button class="sb-btn active" id="sb-camera" onclick="sbToggle('camera')" title="Kamera">
+    <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="14" rx="2"/><circle cx="12" cy="13" r="4"/><path d="M8 6V4h8v2"/></svg>
+    <span>KAMERA</span>
+  </button>
+  <button class="sb-btn active" id="sb-map" onclick="sbToggle('map')" title="Harita">
+    <svg viewBox="0 0 24 24"><polygon points="1,6 1,22 8,18 16,22 23,18 23,2 16,6 8,2"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+    <span>HARİTA</span>
+  </button>
+  <div class="sb-sep"></div>
+  <button class="sb-btn" id="sb-connection" onclick="fpToggle('connection')" title="Bağlantı">
+    <svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>
+    <span>BAĞLANTI</span>
+  </button>
+  <button class="sb-btn" id="sb-ai" onclick="fpToggle('ai')" title="AI Modülleri">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+    <span>AI</span>
+  </button>
+  <button class="sb-btn" id="sb-settings" onclick="fpToggle('settings')" title="Ayarlar">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <span>AYARLAR</span>
+  </button>
+  <div class="sb-end">
+    <button class="sb-btn" id="sb-log" onclick="fpToggle('log')" title="Log">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
+      <span>LOG</span>
+    </button>
+    <button class="sb-btn" onclick="toggleBrowserFullscreen()" title="Tam Ekran">
+      <svg viewBox="0 0 24 24"><polyline points="15,3 21,3 21,9"/><polyline points="9,21 3,21 3,15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+      <span>EKRAN</span>
+    </button>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     APP CONTAINER
+══════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- ── TOP BAR ── -->
+  <div id="top-bar">
+    <div class="tb-brand">INTERCO</div>
+    <div class="tb-cells">
+      <div class="tb-cell" style="min-width:120px;">
+        <div class="tb-cell-label">BAĞLANTI</div>
+        <div id="mav-indicator" class="tb-cell-val">BEKLENIYOR</div>
+      </div>
+      <div class="tb-cell">
+        <div class="tb-cell-label">MOD</div>
+        <div id="bottom-mode-display" class="tb-cell-val">STBY</div>
+      </div>
+      <div class="tb-cell">
+        <div class="tb-cell-label">İRTİFA</div>
+        <div id="tb-alt" class="tb-cell-val">0.0 m</div>
+      </div>
+      <div class="tb-cell">
+        <div class="tb-cell-label">HIZ</div>
+        <div id="tb-spd" class="tb-cell-val">0.0 m/s</div>
+      </div>
+      <div class="tb-cell">
+        <div class="tb-cell-label">BATARYA</div>
+        <div id="tb-bat" class="tb-cell-val">-- V</div>
+      </div>
+      <div class="tb-cell">
+        <div class="tb-cell-label">UYDU</div>
+        <div id="tb-sat" class="tb-cell-val">0</div>
+      </div>
+      <div class="tb-cell">
+        <div class="tb-cell-label">ARM</div>
+        <div id="tb-arm" class="tb-cell-val warn">DISARM</div>
+      </div>
+      <div class="tb-cell" style="min-width:140px;">
+        <div class="tb-cell-label">KAMERA / FPS</div>
+        <div id="fps-indicator" class="tb-cell-val">--</div>
+      </div>
+      <div class="tb-cell">
+        <div class="tb-cell-label">AI DURUM</div>
+        <div id="tb-ai" class="tb-cell-val">INIT</div>
+      </div>
     </div>
-    <img id="video-stream" src="/video_feed" alt="INTERCO EO/IR">
-    <canvas id="hud-canvas"></canvas>
-    <div id="no-signal-banner">NO VIDEO // <span id="ns-cam">WIDE</span></div>
+    <div class="tb-time" id="tb-clock">00:00:00</div>
   </div>
 
-  <div id="map-stage" class="view-pip" ondblclick="handleStageDoubleClick('map')">
-    <div class="pip-badge" onclick="setLayoutMode(true)">
-      <span>3D HARİTA</span>
-      <button type="button" class="pip-expand-btn">BÜYÜT</button>
+  <!-- ── VIEWS (kamera + harita) ── -->
+  <div id="views">
+    <!-- KAMERA -->
+    <div id="camera-wrap">
+      <div id="camera-stage">
+        <img id="video-stream" src="/video_feed" alt="">
+        <canvas id="hud-canvas"></canvas>
+        <div id="no-signal-banner">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+          SINYAL YOK
+          <span id="ns-cam"></span>
+        </div>
+        <div id="targets-dock"></div>
+        <button id="btn-abort-engagement" onclick="abortEngagement()">⬛ ANGAJMANI İPTAL</button>
+      </div>
     </div>
-    <div id="cesium-container"></div>
-  </div>
-
-  <div class="cpdd-optics-bar" id="cpdd-optics-bar">
-    <button type="button" class="tac-btn" onclick="sendCpddCmd('ZOOM_IN')">ZOOM +</button>
-    <button type="button" class="tac-btn" onclick="sendCpddCmd('ZOOM_OUT')">ZOOM -</button>
-    <button type="button" class="tac-btn" onclick="sendCpddCmd('IR_PALETTE')">IR RENK</button>
-  </div>
-
-  <!-- CANLI SİSTEM & FPS TEŞHİS LOG PANELİ -->
-  <div id="live-log-drawer">
-    <div class="log-hdr">
-      <span id="log-perf-summary">DIAGNOSTICS // FPS & HARDWARE</span>
-      <button type="button" style="background:none;border:none;color:var(--hud-red);font-weight:800;cursor:pointer;" onclick="toggleLiveLogs()">[X]</button>
-    </div>
-    <div id="live-log-lines"></div>
-  </div>
-
-  <div class="top-bar">
-    <div class="sys-title">INTERCO</div>
-    <div class="top-status-group">
-      <div id="fps-indicator">FPS: -- / --</div>
-      <div id="mav-indicator" class="hud-tag">LINK: BEKLENIYOR</div>
-      <div id="cam-indicator" class="hud-tag">AUTO [WIDE]</div>
-      <button id="btn-toggle-logs" class="tac-btn" onclick="toggleLiveLogs()">LOG</button>
-      <button class="tac-btn" onclick="openSettings()">⚙ AYARLAR</button>
-      <button id="btn-fullscreen" class="tac-btn" title="Tam Ekran Aç/Kapat" onclick="toggleBrowserFullscreen()">⛶ TAM EKRAN</button>
+    <!-- ayırıcı -->
+    <div id="view-divider"></div>
+    <!-- HARİTA -->
+    <div id="map-wrap">
+      <div id="cesium-container"></div>
     </div>
   </div>
 
-  <div id="targets-dock"></div>
-
-  <div class="bottom-bar">
-    <div class="sensor-group">
+  <!-- ── BOTTOM BAR ── -->
+  <div id="bottom-bar">
+    <!-- kamera seçici -->
+    <div class="bb-group">
+      <span class="bb-label">SENSÖR</span>
       <button id="btn-AUTO" class="tac-btn active" onclick="setCamera('AUTO')">AUTO</button>
       <button id="btn-WIDE" class="tac-btn" onclick="setCamera('WIDE')">GENİŞ</button>
       <button id="btn-NARROW" class="tac-btn" onclick="setCamera('NARROW')">DAR</button>
@@ -551,12 +475,18 @@
       <button id="btn-FUSION" class="tac-btn" onclick="setCamera('FUSION')">EO+IR</button>
       <button id="btn-WEBCAM" class="tac-btn webcam-btn" onclick="setCamera('WEBCAM')">TEST</button>
     </div>
-
-    <div id="bottom-mode-display">MOD: STBY</div>
-
-    <div class="bottom-flight-group">
-      <button id="btn-abort-engagement" onclick="abortEngagement()">✖ İPTAL</button>
-      <select id="flight-mode-select" class="mode-select" title="Uçuş Modu" onchange="onFlightModeSelect(this.value)">
+    <!-- optik kontrol -->
+    <div class="bb-group">
+      <span class="bb-label">OPTİK</span>
+      <button class="tac-btn" onclick="sendCpddCmd('ZOOM_IN')">+ ZOOM</button>
+      <button class="tac-btn" onclick="sendCpddCmd('ZOOM_OUT')">- ZOOM</button>
+      <button class="tac-btn" onclick="sendCpddCmd('IR_PALETTE')">IR PAL</button>
+      <div id="cam-indicator" class="tb-cell-val" style="font-size:10px;color:var(--cyan);padding:0 4px;">AUTO</div>
+    </div>
+    <!-- uçuş modu -->
+    <div class="bb-group">
+      <span class="bb-label">UÇUŞ MODU</span>
+      <select id="flight-mode-select" class="mode-select" onchange="onFlightModeSelect(this.value)">
         <option value="STBY">STBY</option>
         <option value="STABILIZE">STABILIZE</option>
         <option value="ALT_HOLD">ALT_HOLD</option>
@@ -573,1411 +503,365 @@
         <option value="TAKEOFF" disabled>TAKEOFF</option>
         <option value="LANDED" disabled>LANDED</option>
       </select>
-      <button id="btn-bottom-takeoff-land" class="tac-btn" style="border-color:var(--hud-cyan); color:var(--hud-cyan);" onclick="toggleTakeoffLand()">⬆ KALKIŞ</button>
-      <button class="tac-btn" style="border-color:#a78bfa; color:#c4b5fd;" onclick="sendFlightCmd('RTL')">⌂ EVE DÖN</button>
+    </div>
+    <!-- uçuş komutları -->
+    <div class="bb-group">
+      <button id="btn-bottom-takeoff-land" class="tac-btn" style="border-color:var(--cyan);color:var(--cyan);" onclick="toggleTakeoffLand()">KALKIŞ</button>
+      <button class="tac-btn" style="border-color:var(--purple);color:var(--purple);" onclick="sendFlightCmd('RTL')">EVE DÖN</button>
+    </div>
+    <!-- log perf -->
+    <div class="bb-group" style="margin-left:auto;border-right:none;">
+      <span id="log-perf-summary" style="font-size:9px;color:var(--text3);">DIAGNOSTICS</span>
     </div>
   </div>
 
-  <div id="takeoff-modal">
-    <div class="takeoff-box">
-      <h3>⬆ KALKIŞ İRTİFASI ONAYI</h3>
-      <div class="fld">
-        <label>Hedef İrtifa (Metre)</label>
-        <input type="number" id="takeoff-alt-input" value="50" min="5" max="1000" step="5">
-      </div>
-      <div class="takeoff-presets">
-        <button type="button" class="tac-btn" onclick="setTakeoffPreset(30)">30m</button>
-        <button type="button" class="tac-btn" onclick="setTakeoffPreset(50)">50m</button>
-        <button type="button" class="tac-btn" onclick="setTakeoffPreset(100)">100m</button>
-        <button type="button" class="tac-btn" onclick="setTakeoffPreset(150)">150m</button>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="tac-btn" onclick="closeTakeoffModal()">İPTAL</button>
-        <button type="button" class="tac-btn" style="background:var(--hud-cyan); color:#030704; border-color:var(--hud-cyan);" onclick="confirmTakeoff()">✔ ONAYLA</button>
-      </div>
+</div><!-- #app -->
+
+<!-- ══════════════════════════════════════════
+     FLOATING PANELS
+══════════════════════════════════════════ -->
+
+<!-- BAĞLANTI -->
+<div id="panel-connection" class="fp" style="left:62px;top:56px;">
+  <div class="fp-head" id="fp-connection-head">
+    <span class="fp-title">BAĞLANTI // UÇUŞ KONTROLÜ</span>
+    <button class="fp-close" onclick="fpClose('connection')">✕</button>
+  </div>
+  <div class="fp-body">
+    <div class="cp-row"><span class="cp-lbl">MAVLink</span><span id="mav-conn-val" class="cp-val">--</span></div>
+    <div class="cp-row"><span class="cp-lbl">KAMERA</span><span id="cam-conn-val" class="cp-val">--</span></div>
+    <div class="cp-row"><span class="cp-lbl">CLIMB</span><span id="cp-climb" class="cp-val">0.0 m/s</span></div>
+    <div class="cp-row"><span class="cp-lbl">THROTTLE</span><span id="cp-thr" class="cp-val">0%</span></div>
+    <div class="cp-row"><span class="cp-lbl">PITCH / ROLL</span><span id="cp-pr" class="cp-val">0° / 0°</span></div>
+    <div class="cp-row" style="gap:8px;padding:10px 12px;flex-wrap:wrap;">
+      <button id="btn-bottom-takeoff-land2" class="tac-btn" style="border-color:var(--cyan);color:var(--cyan);" onclick="toggleTakeoffLand()">KALKIŞ</button>
+      <button class="tac-btn" style="border-color:var(--purple);color:var(--purple);" onclick="sendFlightCmd('RTL')">EVE DÖN</button>
     </div>
   </div>
+  <div class="fp-resize" id="fp-connection-resize"></div>
+</div>
 
-  <div id="settings-modal">
-    <div class="modal-panel">
-      <div class="modal-top">
-        <h2>INTERCO // SİSTEM AYARLARI</h2>
-        <button class="tac-btn" onclick="closeSettings()">KAPAT [X]</button>
-      </div>
+<!-- LOG -->
+<div id="panel-log" class="fp" style="left:62px;bottom:56px;width:480px;">
+  <div class="fp-head" id="fp-log-head">
+    <span class="fp-title">LOG // TANI</span>
+    <button class="fp-close" onclick="fpClose('log')">✕</button>
+  </div>
+  <div id="log-perf-summary-fp" style="padding:5px 12px;font-size:9px;color:var(--text3);border-bottom:1px solid var(--border);flex-shrink:0;"></div>
+  <div class="fp-body" style="max-height:260px;overflow-y:auto;" id="live-log-drawer">
+    <div id="live-log-lines"></div>
+  </div>
+  <div class="fp-resize" id="fp-log-resize"></div>
+</div>
 
-      <div class="sec-hdr">01 // TELEMETRİ (SITL / UDP / TCP)</div>
+<!-- AYARLAR -->
+<div id="settings-modal" class="fp" style="left:62px;top:56px;width:620px;">
+  <div class="fp-head" id="fp-settings-head">
+    <span class="fp-title">INTERCO // SİSTEM AYARLARI</span>
+    <button class="fp-close" onclick="closeSettings()">✕</button>
+  </div>
+  <div class="fp-body">
+    <div class="settings-tabs" id="settings-tabs">
+      <button class="settings-tab active" data-tab="tab-drone" onclick="switchSettingsTab('tab-drone')">DRON BAĞLANTISI</button>
+      <button class="settings-tab" data-tab="tab-camera" onclick="switchSettingsTab('tab-camera')">KAMERA MODELİ</button>
+      <button class="settings-tab" data-tab="tab-test" onclick="switchSettingsTab('tab-test')">TEST KAYNAĞI</button>
+      <button class="settings-tab" data-tab="tab-pid" onclick="switchSettingsTab('tab-pid')">PID GÜDÜM</button>
+    </div>
+    <div class="settings-tab-content active" id="tab-drone">
+      <div class="sec-hdr">TELEMETRİ BAĞLANTISI</div>
       <div class="form-grid-3">
-        <div class="fld">
-          <label>Protokol</label>
-          <select id="cfg-tel-proto" onchange="onProtocolChange()">
-            <option value="SITL">SITL (Dahili Simülatör)</option>
-            <option value="UDP">UDP (TAISYNC Dinle)</option>
-            <option value="TCP">TCP Client (Drona Bağlan)</option>
-            <option value="TCPIN">TCP Server (Dinle)</option>
-          </select>
-        </div>
-        <div class="fld">
-          <label id="lbl-tel-host">IP Adresi</label>
-          <input type="text" id="cfg-tel-host" placeholder="127.0.0.1">
-        </div>
-        <div class="fld">
-          <label>Port</label>
-          <input type="number" id="cfg-tel-port" value="5760">
-        </div>
+        <div class="fld"><label>Protokol</label><select id="cfg-tel-proto" onchange="onProtocolChange()"><option value="SITL">SITL</option><option value="UDP">UDP</option><option value="TCP">TCP Client</option><option value="TCPIN">TCP Server</option></select></div>
+        <div class="fld"><label id="lbl-tel-host">IP Adresi</label><input type="text" id="cfg-tel-host" placeholder="127.0.0.1"></div>
+        <div class="fld"><label>Port</label><input type="number" id="cfg-tel-port" value="5760"></div>
       </div>
-
-      <div class="sec-hdr">02 // CPDD075 KAMERA SDK & TEKİL RTSP (192.168.144.108)</div>
+    </div>
+    <div class="settings-tab-content" id="tab-camera">
+      <div class="sec-hdr">CPDD075CCT - Üçlü AI Takip Modülü</div>
       <div class="form-grid-3">
-        <div class="fld">
-          <label>Kamera / Gimbal IP Adresi</label>
-          <input type="text" id="cfg-cpdd-ip" value="192.168.144.108" oninput="onCpddIpInput()">
-          <small>Fabrika varsayılanı: 192.168.144.108</small>
-        </div>
-        <div class="fld">
-          <label>UDP Server / Local Port</label>
-          <div class="input-with-btn">
-            <input type="number" id="cfg-cpdd-udp-port" value="9554" title="Server Port (9554)">
-            <input type="number" id="cfg-cpdd-local-port" value="7002" title="Local Port (7002)">
-          </div>
-          <small>Server: 9554 | Local Port: 7002</small>
-        </div>
-        <div class="fld">
-          <label>Kamera Montaj Açısı / Tilt (°)</label>
-          <input type="number" step="1" min="-90" max="90" id="cfg-cam-tilt" value="30">
-          <small>Varsayılan: +30°</small>
-        </div>
+        <div class="fld"><label>Kamera / Gimbal IP</label><input type="text" id="cfg-cpdd-ip" value="192.168.144.108" oninput="onCpddIpInput()"><small>Fabrika: 192.168.144.108</small></div>
+        <div class="fld"><label>UDP Port / Local Port</label><div class="input-with-btn"><input type="number" id="cfg-cpdd-udp-port" value="9554" title="Server Port"><input type="number" id="cfg-cpdd-local-port" value="7002" title="Local Port"></div><small>Server: 9554 | Local: 7002</small></div>
+        <div class="fld"><label>Kamera Tilt Açısı (°)</label><input type="number" step="1" min="-90" max="90" id="cfg-cam-tilt" value="30"><small>Varsayılan: +30°</small></div>
       </div>
-      <div class="form-grid" style="margin-top:8px;">
-        <div class="fld">
-          <label>Tekil RTSP Video Akış Adresi (Single Stream)</label>
-          <input type="text" id="cfg-cpdd-rtsp" value="rtsp://192.168.144.108/live/0">
-          <small>Geniş/Dar/Termal geçişleri bu tek akış üzerinden UDP ile yapılır</small>
-        </div>
-        <div class="fld">
-          <label>Dikey Görüş Açısı / vFOV (Derece °)</label>
-          <input type="number" step="1" min="20" max="140" id="cfg-cam-vfov" value="60">
-          <small>Ufuk çizgisi kompanzasyonu (Varsayılan: 60°)</small>
-        </div>
-        <div class="fld">
-          <label>Network UDP Komut Testi (Kılavuz Madde 29)</label>
-          <div class="input-with-btn">
-            <input type="text" id="cfg-cpdd-text-cmd" value="sh:ifconfig" placeholder="sh:ifconfig">
-            <button type="button" class="tac-btn" onclick="sendCpddRawText()">GÖNDER</button>
-          </div>
-          <small id="cpdd-raw-reply">Cihaz IP sorgusu: sh:ifconfig (UDP 9554)</small>
-        </div>
-        <div class="fld">
-          <label>Network Hex Komut Testi (Kılavuz Madde 28 - Type B / CD)</label>
-          <div class="input-with-btn">
-            <input type="text" id="cfg-cpdd-hex-b" value="2F" style="width:65px;" title="Type B (Örn: 2F)">
-            <input type="text" id="cfg-cpdd-hex-cd" value="01 00 00 00" title="Type CD (Örn: 01 00 00 00)">
-            <button type="button" class="tac-btn" onclick="sendCpddRawHex()">HEX AT</button>
-          </div>
-          <small>2F: Görünüm (01:Geniş, 02:Dar, 03:Termal) | 45: Zoom</small>
-        </div>
-        <div class="fld" style="grid-column: span 2;">
-          <label>Bing Maps API Key (İsteğe Bağlı)</label>
-          <input type="text" id="cfg-bing-key" placeholder="Boşsa otomatik Bing Uydu açılır">
-        </div>
+      <div class="form-grid" style="margin-top:10px;">
+        <div class="fld"><label>Video Akış Adresi</label><input type="text" id="cfg-cpdd-rtsp" value="rtsp://192.168.144.108/live/0"><small>Tekil akış - Görünüm geçişi UDP ile</small></div>
+        <div class="fld"><label>Dikey Görüş Açısı / vFOV (°)</label><input type="number" step="1" min="20" max="140" id="cfg-cam-vfov" value="60"><small>Ufuk kompanzasyonu (Varsayılan: 60°)</small></div>
+        <div class="fld"><label>Bing Maps API Key</label><input type="text" id="cfg-bing-key" placeholder="Boş: otomatik Bing Uydu"></div>
       </div>
-
-      <div class="sec-hdr">03 // TEST & DATASET KAYNAĞI (video01 - video20)</div>
-      <div class="form-grid-3">
-        <div class="fld">
-          <label>Kaynak Tipi</label>
-          <select id="cfg-test-type" onchange="onTestTypeChange()">
-            <option value="DATASET">Dataset (video01-20)</option>
-            <option value="WEBCAM">Web Kamerası (0, 1)</option>
-            <option value="CUSTOM">Video Dosyası (.mp4)</option>
-          </select>
-        </div>
-        <div class="fld" id="box-dataset-select">
-          <label>Dataset Klasörü</label>
-          <select id="cfg-dataset-folder"></select>
-        </div>
-        <div class="fld" id="box-custom-source" style="display:none;">
-          <label id="lbl-custom-source">Kamera / Dosya</label>
-          <div class="input-with-btn">
-            <input type="text" id="cfg-cam-webcam" placeholder="0">
-            <button type="button" id="btn-scan-cam" class="tac-btn" onclick="scanWebcams()">TARA</button>
-          </div>
-        </div>
-        <div class="fld">
-          <label>Dataset Ana Dizini</label>
-          <input type="text" id="cfg-video-base" placeholder="video">
-        </div>
-      </div>
-
-      <div class="sec-hdr">04 // HEDEF TANIMA & PID GÜDÜM</div>
+      <div class="sec-hdr" style="margin-top:14px;">CİHAZ KOMUT TESTİ</div>
       <div class="form-grid">
-        <div class="fld">
-          <label>YOLOv8 Model</label>
-          <input type="text" id="cfg-model">
+        <div class="fld"><label>UDP Metin Komutu</label><div class="input-with-btn"><input type="text" id="cfg-cpdd-text-cmd" value="sh:ifconfig"><button type="button" class="tac-btn" onclick="sendCpddRawText()">GÖNDER</button></div><small id="cpdd-raw-reply">Yanıt burada görünür</small></div>
+        <div class="fld"><label>Hex Komutu (Type B / CD)</label><div class="input-with-btn"><input type="text" id="cfg-cpdd-hex-b" value="2F" style="width:65px;"><input type="text" id="cfg-cpdd-hex-cd" value="01 00 00 00"><button type="button" class="tac-btn" onclick="sendCpddRawHex()">HEX AT</button></div><small>2F: Görünüm (01:Geniş, 02:Dar, 03:Termal)</small></div>
+      </div>
+    </div>
+    <div class="settings-tab-content" id="tab-test">
+      <div class="sec-hdr">TEST VİDEO KAYNAĞI</div>
+      <div class="form-grid">
+        <div class="fld"><label>Kaynak Tipi</label><select id="cfg-test-type" onchange="onTestTypeChange()"><option value="WEBCAM">Web Kamerası</option><option value="CUSTOM">Video / RTSP URL</option></select></div>
+        <div class="fld" id="box-custom-source"><label id="lbl-custom-source">Kamera İndeksi</label><div class="input-with-btn"><input type="text" id="cfg-cam-webcam" placeholder="0"><button type="button" id="btn-scan-cam" class="tac-btn" onclick="scanWebcams()">TARA</button></div></div>
+      </div>
+    </div>
+    <div class="settings-tab-content" id="tab-pid">
+      <div class="sec-hdr">PID GÜDÜM PARAMETRELERİ</div>
+      <div class="form-grid-3">
+        <div class="fld"><label>Saldırı İtkisi (0.1-1.0)</label><input type="number" step="0.1" min="0.1" max="1.0" id="cfg-thrust"></div>
+        <div class="fld"><label>Yaw Rate Gain</label><input type="number" step="0.1" id="cfg-yaw-gain"></div>
+        <div class="fld"><label>Pitch Rate Gain</label><input type="number" step="0.1" id="cfg-pitch-gain"></div>
+      </div>
+    </div>
+    <div id="test-report"></div>
+    <div class="modal-footer">
+      <button class="tac-btn" onclick="closeSettings()">İPTAL</button>
+      <button id="btn-save-test" class="tac-btn active" onclick="saveAndTest()">KAYDET VE TEST ET</button>
+    </div>
+  </div>
+  <div class="fp-resize" id="fp-settings-resize"></div>
+</div>
+
+<!-- AI MODÜLLER -->
+<div id="ai-modules-modal" class="fp" style="left:62px;top:56px;width:650px;">
+  <div class="fp-head" id="fp-ai-head">
+    <span class="fp-title">INTERCO // GÖRÜNTÜ İŞLEME MODÜLLERİ</span>
+    <button class="fp-close" onclick="closeAiModules()">✕</button>
+  </div>
+  <div class="fp-body">
+    <div class="ai-modal-panel">
+      <div class="modal-top" style="display:none;"></div>
+      <div class="sec-hdr" style="margin:10px 14px 0;padding-bottom:8px;">01 // HAZIR MODÜLLER</div>
+      <div class="ai-modules-grid" id="ai-builtin-grid"></div>
+      <div class="sec-hdr" style="margin:10px 14px 0;padding-bottom:8px;">02 // KULLANICI MODELLERİ</div>
+      <div class="ai-modules-grid" id="ai-custom-grid"></div>
+      <div class="ai-add-btn-row">
+        <button class="ai-dl-btn" id="btn-show-custom-form" onclick="toggleCustomModelForm()">+ ÖZEL MODEL EKLE</button>
+      </div>
+      <div class="ai-custom-form" id="ai-custom-form">
+        <div class="form-grid">
+          <div class="fld"><label>Model Adı</label><input type="text" id="ai-custom-name" placeholder="Silah Tanıma"></div>
+          <div class="fld"><label>Model URL / Dosya Yolu</label><input type="text" id="ai-custom-url" placeholder="https://... veya /path/to/model.pt"></div>
+          <div class="fld"><label>Model Tipi</label><select id="ai-custom-type"><option value="yolov8_detect">YOLOv8 Detect</option><option value="yolov8_pose">YOLOv8 Pose</option><option value="onnx">ONNX</option></select></div>
+          <div class="fld"><label>Varsayılan Hassasiyet</label><input type="number" id="ai-custom-conf" value="0.5" min="0.1" max="0.95" step="0.05"></div>
         </div>
-        <div class="fld">
-          <label>Güven Eşiği (Confidence)</label>
-          <input type="number" step="0.05" min="0.1" max="0.95" id="cfg-conf">
-        </div>
-        <div class="fld">
-          <label>Hedef Sınıf ID'leri</label>
-          <input type="text" id="cfg-classes">
-          <small>4: Sabit Kanat, 2/3/5/7: Araçlar, 14: Hava Hedefi, 0: Test</small>
-        </div>
-        <div class="fld">
-          <label>Saldırı İtkisi (0.1 - 1.0)</label>
-          <input type="number" step="0.1" min="0.1" max="1.0" id="cfg-thrust">
-        </div>
-        <div class="fld">
-          <label>Yaw Rate Gain</label>
-          <input type="number" step="0.1" id="cfg-yaw-gain">
-        </div>
-        <div class="fld">
-          <label>Pitch Rate Gain</label>
-          <input type="number" step="0.1" id="cfg-pitch-gain">
+        <div style="margin-top:10px;display:flex;gap:6px;justify-content:flex-end;">
+          <button class="tac-btn" onclick="toggleCustomModelForm()">İPTAL</button>
+          <button class="tac-btn active" onclick="addCustomModule()">EKLE</button>
         </div>
       </div>
-
-      <div id="test-report"></div>
-
-      <div class="modal-footer">
-        <button class="tac-btn" onclick="closeSettings()">İPTAL</button>
-        <button id="btn-save-test" class="tac-btn active" onclick="saveAndTest()">KAYDET VE TEST ET</button>
+      <div class="sec-hdr" style="margin:10px 14px 0;padding-bottom:8px;">03 // AKTİF MODÜL SONUÇLARI</div>
+      <div class="ai-results-panel" id="ai-results-panel"><div style="font-size:10px;color:var(--text3);">Aktif modül yok</div></div>
+      <div class="sec-hdr" style="margin:10px 14px 0;padding-bottom:8px;">04 // YAPILANDIRMA PROFİLLERİ</div>
+      <div class="profile-save-row">
+        <input type="text" id="profile-name-input" placeholder="Profil adı girin...">
+        <button class="ai-dl-btn" onclick="saveAiProfile()">KAYDET</button>
+      </div>
+      <div id="profile-list" style="padding:0 14px;"><div style="font-size:10px;color:var(--text3);padding:4px;">Kayıtlı profil yok</div></div>
+      <div class="sec-hdr" style="margin:10px 14px 0;padding-bottom:8px;">05 // KLASÖR YÖNETİMİ</div>
+      <div class="folder-create-row">
+        <input type="text" id="new-folder-name" placeholder="Yeni klasör adı...">
+        <button class="ai-dl-btn" onclick="createFolder()">OLUŞTUR</button>
+      </div>
+      <div class="folders-grid" id="folders-grid">
+        <div style="font-size:10px;color:var(--text3);padding:8px;grid-column:1/-1;">Henüz klasör eklenmedi</div>
       </div>
     </div>
   </div>
+  <div class="fp-resize" id="fp-ai-resize"></div>
+</div>
+
+<!-- TAKEOFF MODAL -->
+<div id="takeoff-modal">
+  <div class="takeoff-box">
+    <h3>KALKIŞ İRTİFASI ONAYI</h3>
+    <div class="fld"><label>Hedef İrtifa (Metre)</label><input type="number" id="takeoff-alt-input" value="50" min="5" max="1000" step="5"></div>
+    <div class="takeoff-presets">
+      <button class="tac-btn" onclick="setTakeoffPreset(30)">30m</button>
+      <button class="tac-btn" onclick="setTakeoffPreset(50)">50m</button>
+      <button class="tac-btn" onclick="setTakeoffPreset(100)">100m</button>
+      <button class="tac-btn" onclick="setTakeoffPreset(150)">150m</button>
+    </div>
+    <div class="modal-footer" style="border:none;padding:0;background:none;">
+      <button class="tac-btn" onclick="closeTakeoffModal()">İPTAL</button>
+      <button class="tac-btn" style="background:rgba(0,212,255,.2);color:var(--cyan);border-color:var(--cyan);" onclick="confirmTakeoff()">ONAYLA</button>
+    </div>
+  </div>
+</div>
 
 <script>
-  const ws = new WebSocket(`ws://${window.location.host}/ws/telemetry`);
-  const targetsDock = document.getElementById("targets-dock");
-  const abortBtn = document.getElementById("btn-abort-engagement");
-  const noSigBanner = document.getElementById("no-signal-banner");
+/* ═══════════════════════════════════════
+   PANEL & FLOATING PANEL SYSTEM
+═══════════════════════════════════════ */
+let _cameraVisible = true;
+let _mapVisible = true;
 
-  let lastTargetsSignature = "";
-  let isMapFullscreen = false;
-
-  const hudState = {
-    pitch: 0, targetPitch: 0,
-    roll: 0, targetRoll: 0,
-    yaw: 0, targetYaw: 0,
-    alt: 0, targetAlt: 0,
-    speed: 0, targetSpeed: 0,
-    airspeed: 0,
-    climb: 0,
-    throttle: 0,
-    battery_v: 0,
-    satellites: 0,
-    armed: false,
-    inAir: false,
-    mode: "STBY",
-    engaged: false,
-    lockedTargetId: null,
-    aiStatus: "INIT",
-    activeCam: "WIDE",
-    cameraTiltDeg: 30.0,
-    cameraVfovDeg: 60.0,
-    cameraHfovDeg: 80.0,
-    estTargetLat: null,
-    estTargetLon: null,
-    estTargetAlt: 0,
-    estTargetLabel: "",
-    lat: 39.925533,
-    lon: 32.866287,
-    homeLat: 39.925533,
-    homeLon: 32.866287
-  };
-
-  let logsVisible = false;
-  function toggleLiveLogs() {
-    logsVisible = !logsVisible;
-    const drawer = document.getElementById("live-log-drawer");
-    const btn = document.getElementById("btn-toggle-logs");
-    if (drawer) drawer.style.display = logsVisible ? "block" : "none";
-    if (btn) btn.classList.toggle("active", logsVisible);
+function sbToggle(name) {
+  if (name === 'camera') {
+    _cameraVisible = !_cameraVisible;
+    document.getElementById('camera-wrap').style.display = _cameraVisible ? '' : 'none';
+    document.getElementById('view-divider').style.display = (_cameraVisible && _mapVisible) ? '' : 'none';
+    document.getElementById('sb-camera').classList.toggle('active', _cameraVisible);
+    setTimeout(() => { resizeHudCanvas(); }, 60);
+  } else if (name === 'map') {
+    _mapVisible = !_mapVisible;
+    document.getElementById('map-wrap').style.display = _mapVisible ? '' : 'none';
+    document.getElementById('view-divider').style.display = (_cameraVisible && _mapVisible) ? '' : 'none';
+    document.getElementById('sb-map').classList.toggle('active', _mapVisible);
+    setTimeout(() => { if (cesiumViewer) { cesiumViewer.resize(); cesiumViewer.scene.requestRender(); } }, 60);
   }
-
-  function toggleBrowserFullscreen() {
-    const docEl = document.documentElement;
-    const isFs = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement;
-
-    if (!isFs) {
-      if (docEl.requestFullscreen) {
-        docEl.requestFullscreen().catch(() => {});
-      } else if (docEl.webkitRequestFullscreen) {
-        docEl.webkitRequestFullscreen();
-      } else if (docEl.mozRequestFullScreen) {
-        docEl.mozRequestFullScreen();
-      }
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
-      } else if (document.webkitExitFullscreen) {
-        document.webkitExitFullscreen();
-      } else if (document.mozCancelFullScreen) {
-        document.mozCancelFullScreen();
-      }
-    }
-  }
-
-  function updateFullscreenButtonLabel() {
-    const btn = document.getElementById("btn-fullscreen");
-    if (!btn) return;
-    const isFs = Boolean(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
-    if (isFs) {
-      btn.innerText = "🗗 ÇIKIŞ";
-      btn.classList.add("active");
-    } else {
-      btn.innerText = "⛶ TAM EKRAN";
-      btn.classList.remove("active");
-    }
-    setTimeout(() => {
-      resizeHudCanvas();
-      if (cesiumViewer) {
-        cesiumViewer.resize();
-        cesiumViewer.scene.requestRender();
-      }
-    }, 80);
-  }
-
-  document.addEventListener("fullscreenchange", updateFullscreenButtonLabel);
-  document.addEventListener("webkitfullscreenchange", updateFullscreenButtonLabel);
-
-  function setLayoutMode(mapFull) {
-    isMapFullscreen = mapFull;
-    const camStage = document.getElementById("camera-stage");
-    const mapStage = document.getElementById("map-stage");
-
-    const optBar = document.getElementById("cpdd-optics-bar");
-    if (isMapFullscreen) {
-      mapStage.className = "view-fullscreen";
-      camStage.className = "view-pip";
-      if (optBar) optBar.style.display = "none";
-    } else {
-      camStage.className = "view-fullscreen";
-      mapStage.className = "view-pip";
-      if (optBar) optBar.style.display = "flex";
-    }
-    setTimeout(() => {
-      resizeHudCanvas();
-      if (cesiumViewer) {
-        cesiumViewer.resize();
-        cesiumViewer.scene.requestRender();
-      }
-    }, 60);
-  }
-
-  function handleStageDoubleClick(stageName) {
-    if (stageName === "map" && !isMapFullscreen) {
-      setLayoutMode(true);
-    } else if (stageName === "camera" && isMapFullscreen) {
-      setLayoutMode(false);
-    }
-  }
-
-  let cesiumViewer = null;
-  let droneEntity = null;
-  let headingLineEntity = null;
-  let altitudeDropLineEntity = null;
-  let altitudeLabelEntity = null;
-  let homeEntity = null;
-  let targetEntity = null;
-  let targetDropLineEntity = null;
-  let targetLabelEntity = null;
-  let engagementLinkEntity = null;
-
-  function tileXYToQuadKey(x, y, level) {
-    let quadKey = "";
-    for (let i = level; i > 0; i--) {
-      let digit = 0;
-      const mask = 1 << (i - 1);
-      if ((x & mask) !== 0) digit++;
-      if ((y & mask) !== 0) digit += 2;
-      quadKey += digit.toString();
-    }
-    return quadKey;
-  }
-
-  function createBingAerialProvider(bingKey) {
-    if (bingKey && bingKey.trim().length > 10 && typeof Cesium.BingMapsImageryProvider !== "undefined") {
-      return Cesium.BingMapsImageryProvider.fromUrl("https://dev.virtualearth.net", {
-        key: bingKey.trim(),
-        mapStyle: Cesium.BingMapsStyle.AERIAL
-      });
-    }
-
-    return Promise.resolve(
-      new Cesium.UrlTemplateImageryProvider({
-        url: "https://ecn.t{s}.tiles.virtualearth.net/tiles/a{quadkey}.jpeg?g=14265",
-        subdomains: ["0", "1", "2", "3"],
-        minimumLevel: 1,
-        maximumLevel: 19,
-        credit: "Microsoft Bing Maps Aerial",
-        customTags: {
-          quadkey: function (imageryProvider, x, y, level) {
-            return tileXYToQuadKey(x, y, level);
-          }
-        }
-      })
-    );
-  }
-
-  function createTarget2DIconDataUrl() {
-    const svg = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-        <circle cx="32" cy="32" r="22" fill="rgba(255,46,46,0.22)" stroke="#ff2e2e" stroke-width="2.5" stroke-dasharray="8 4"/>
-        <line x1="32" y1="4" x2="32" y2="18" stroke="#ff2e2e" stroke-width="2.5"/>
-        <line x1="32" y1="46" x2="32" y2="60" stroke="#ff2e2e" stroke-width="2.5"/>
-        <line x1="4" y1="32" x2="18" y2="32" stroke="#ff2e2e" stroke-width="2.5"/>
-        <line x1="46" y1="32" x2="60" y2="32" stroke="#ff2e2e" stroke-width="2.5"/>
-        <polygon points="32,22 42,32 32,42 22,32" fill="#ff2e2e" stroke="#ffffff" stroke-width="1.5"/>
-      </svg>`;
-    return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
-  }
-
-  function createDrone2DIconDataUrl() {
-    const svg = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-        <line x1="14" y1="14" x2="50" y2="50" stroke="#39ff5a" stroke-width="4" stroke-linecap="round"/>
-        <line x1="50" y1="14" x2="14" y2="50" stroke="#39ff5a" stroke-width="4" stroke-linecap="round"/>
-        <circle cx="14" cy="14" r="7" fill="rgba(57,255,90,0.25)" stroke="#39ff5a" stroke-width="2.5"/>
-        <circle cx="50" cy="14" r="7" fill="rgba(57,255,90,0.25)" stroke="#39ff5a" stroke-width="2.5"/>
-        <circle cx="14" cy="50" r="7" fill="rgba(57,255,90,0.25)" stroke="#39ff5a" stroke-width="2.5"/>
-        <circle cx="50" cy="50" r="7" fill="rgba(57,255,90,0.25)" stroke="#39ff5a" stroke-width="2.5"/>
-        <polygon points="32,6 24,26 32,21 40,26" fill="#ff2e2e" stroke="#ffffff" stroke-width="1.2"/>
-        <circle cx="32" cy="32" r="5" fill="#050a07" stroke="#39ff5a" stroke-width="2"/>
-      </svg>`;
-    return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
-  }
-
-  function computeDestinationPoint(latDeg, lonDeg, bearingDeg, distanceMeters) {
-    const R = 6378137.0;
-    const brng = (bearingDeg * Math.PI) / 180.0;
-    const lat1 = (latDeg * Math.PI) / 180.0;
-    const lon1 = (lonDeg * Math.PI) / 180.0;
-
-    const lat2 = Math.asin(
-      Math.sin(lat1) * Math.cos(distanceMeters / R) +
-      Math.cos(lat1) * Math.sin(distanceMeters / R) * Math.cos(brng)
-    );
-    const lon2 = lon1 + Math.atan2(
-      Math.sin(brng) * Math.sin(distanceMeters / R) * Math.cos(lat1),
-      Math.cos(distanceMeters / R) - Math.sin(lat1) * Math.sin(lat2)
-    );
-    return {
-      lat: (lat2 * 180.0) / Math.PI,
-      lon: (lon2 * 180.0) / Math.PI
-    };
-  }
-
-  async function initCesiumMap() {
-    let bingKey = "";
-    try {
-      const res = await fetch("/api/settings");
-      const s = await res.json();
-      bingKey = s.bing_maps_key || "";
-      if (s.camera_tilt_deg !== undefined) hudState.cameraTiltDeg = parseFloat(s.camera_tilt_deg);
-      if (s.camera_vfov_deg !== undefined) hudState.cameraVfovDeg = parseFloat(s.camera_vfov_deg);
-    } catch (e) {}
-
-    cesiumViewer = new Cesium.Viewer("cesium-container", {
-      baseLayer: false,
-      baseLayerPicker: false,
-      geocoder: false,
-      homeButton: false,
-      sceneModePicker: false,
-      navigationHelpButton: false,
-      animation: false,
-      timeline: false,
-      fullscreenButton: false,
-      infoBox: false,
-      selectionIndicator: false,
-      terrainProvider: new Cesium.EllipsoidTerrainProvider()
-    });
-
-    const bingProvider = await createBingAerialProvider(bingKey);
-    cesiumViewer.imageryLayers.addImageryProvider(bingProvider);
-
-    cesiumViewer.scene.globe.enableLighting = false;
-    cesiumViewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#0b1410");
-
-    const droneIconUrl = createDrone2DIconDataUrl();
-
-    homeEntity = cesiumViewer.entities.add({
-      position: Cesium.Cartesian3.fromDegrees(hudState.homeLon, hudState.homeLat, 0),
-      point: {
-        pixelSize: 7,
-        color: Cesium.Color.fromCssColorString("#a78bfa"),
-        outlineColor: Cesium.Color.BLACK,
-        outlineWidth: 2
-      },
-      label: {
-        text: "H",
-        font: "bold 10px Consolas, monospace",
-        fillColor: Cesium.Color.fromCssColorString("#c4b5fd"),
-        pixelOffset: new Cesium.Cartesian2(0, -12)
-      }
-    });
-
-    droneEntity = cesiumViewer.entities.add({
-      position: Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, hudState.alt),
-      billboard: {
-        image: droneIconUrl,
-        width: 34,
-        height: 34,
-        rotation: -Cesium.Math.toRadians(hudState.yaw),
-        alignedAxis: Cesium.Cartesian3.UNIT_Z,
-        verticalOrigin: Cesium.VerticalOrigin.CENTER,
-        horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
-        disableDepthTestDistance: Number.POSITIVE_INFINITY
-      }
-    });
-
-    const initDest = computeDestinationPoint(hudState.lat, hudState.lon, hudState.yaw, 85.0);
-    headingLineEntity = cesiumViewer.entities.add({
-      polyline: {
-        positions: [
-          Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, hudState.alt),
-          Cesium.Cartesian3.fromDegrees(initDest.lon, initDest.lat, hudState.alt)
-        ],
-        width: 2.2,
-        material: Cesium.Color.fromCssColorString("#ff3b30")
-      }
-    });
-
-    altitudeDropLineEntity = cesiumViewer.entities.add({
-      polyline: {
-        positions: [
-          Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, hudState.alt),
-          Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, 0.0)
-        ],
-        width: 1.4,
-        material: new Cesium.PolylineDashMaterialProperty({
-          color: Cesium.Color.fromCssColorString("#39ff5a"),
-          dashLength: 8.0
-        })
-      }
-    });
-
-    altitudeLabelEntity = cesiumViewer.entities.add({
-      position: Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, hudState.alt / 2.0),
-      label: {
-        text: `ALT: ${hudState.alt.toFixed(1)} m`,
-        font: "bold 11px Consolas, monospace",
-        fillColor: Cesium.Color.fromCssColorString("#39ff5a"),
-        outlineColor: Cesium.Color.BLACK,
-        outlineWidth: 3,
-        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-        showBackground: true,
-        backgroundColor: new Cesium.Color(0.02, 0.06, 0.04, 0.8),
-        backgroundPadding: new Cesium.Cartesian2(5, 2),
-        pixelOffset: new Cesium.Cartesian2(36, 0),
-        disableDepthTestDistance: Number.POSITIVE_INFINITY
-      }
-    });
-
-    const targetIconUrl = createTarget2DIconDataUrl();
-
-    targetEntity = cesiumViewer.entities.add({
-      show: false,
-      position: Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, 50),
-      billboard: {
-        image: targetIconUrl,
-        width: 32,
-        height: 32,
-        verticalOrigin: Cesium.VerticalOrigin.CENTER,
-        horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
-        disableDepthTestDistance: Number.POSITIVE_INFINITY
-      }
-    });
-
-    targetLabelEntity = cesiumViewer.entities.add({
-      show: false,
-      position: Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, 50),
-      label: {
-        text: "TGT",
-        font: "bold 10px Consolas, monospace",
-        fillColor: Cesium.Color.fromCssColorString("#ff6b63"),
-        outlineColor: Cesium.Color.BLACK,
-        outlineWidth: 3,
-        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-        showBackground: true,
-        backgroundColor: new Cesium.Color(0.18, 0.02, 0.02, 0.85),
-        backgroundPadding: new Cesium.Cartesian2(5, 2),
-        pixelOffset: new Cesium.Cartesian2(0, -24),
-        disableDepthTestDistance: Number.POSITIVE_INFINITY
-      }
-    });
-
-    targetDropLineEntity = cesiumViewer.entities.add({
-      show: false,
-      polyline: {
-        positions: [
-          Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, 50),
-          Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, 0)
-        ],
-        width: 1.2,
-        material: new Cesium.PolylineDashMaterialProperty({
-          color: Cesium.Color.fromCssColorString("#ff2e2e"),
-          dashLength: 6.0
-        })
-      }
-    });
-
-    engagementLinkEntity = cesiumViewer.entities.add({
-      show: false,
-      polyline: {
-        positions: [
-          Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, hudState.alt),
-          Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, 50)
-        ],
-        width: 1.8,
-        material: new Cesium.PolylineDashMaterialProperty({
-          color: Cesium.Color.fromCssColorString("#ffaa00"),
-          dashLength: 10.0
-        })
-      }
-    });
-
-    cesiumViewer.trackedEntity = undefined;
-    cesiumViewer.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK);
-    cesiumViewer.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
-    cesiumViewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat - 0.004, 450.0),
-      orientation: {
-        heading: Cesium.Math.toRadians(0.0),
-        pitch: Cesium.Math.toRadians(-48.0),
-        roll: 0.0
-      }
-    });
-  }
-
-  initCesiumMap();
-
-  async function applyBingLayer(bingKey) {
-    if (!cesiumViewer) return;
-    cesiumViewer.imageryLayers.removeAll();
-    const bingProvider = await createBingAerialProvider(bingKey);
-    cesiumViewer.imageryLayers.addImageryProvider(bingProvider);
-  }
-
-  let lastMapLat = null;
-  let lastMapLon = null;
-  let lastMapAlt = null;
-  let lastMapYaw = null;
-  let lastMapSpd = null;
-
-  let lastTargetVisState = false;
-  let lastTgtLat = null;
-  let lastTgtLon = null;
-  let lastTgtAlt = null;
-
-  function setTargetMapVisibility(visible) {
-    if (lastTargetVisState === visible) return;
-    lastTargetVisState = visible;
-    if (targetEntity) targetEntity.show = visible;
-    if (targetLabelEntity) targetLabelEntity.show = visible;
-    if (targetDropLineEntity) targetDropLineEntity.show = visible;
-    if (engagementLinkEntity) engagementLinkEntity.show = visible;
-  }
-
-  function updateCesiumDroneFromTelemetry(lat, lon, alt, yaw, pitch, speed, homeLat, homeLon, isEngaged, lockedTarget) {
-    if (!cesiumViewer || !droneEntity) return;
-
-    if (homeEntity && homeLat && homeLon) {
-      homeEntity.position = Cesium.Cartesian3.fromDegrees(homeLon, homeLat, 0);
-    }
-
-    const dronePos = Cesium.Cartesian3.fromDegrees(lon, lat, alt);
-    const groundPos = Cesium.Cartesian3.fromDegrees(lon, lat, 0.0);
-    const midPos = Cesium.Cartesian3.fromDegrees(lon, lat, alt / 2.0);
-
-    const droneChanged = (
-      lat !== lastMapLat ||
-      lon !== lastMapLon ||
-      alt !== lastMapAlt ||
-      yaw !== lastMapYaw ||
-      speed !== lastMapSpd
-    );
-    if (droneChanged) {
-      lastMapLat = lat;
-      lastMapLon = lon;
-      lastMapAlt = alt;
-      lastMapYaw = yaw;
-      lastMapSpd = speed;
-
-      droneEntity.position = dronePos;
-      droneEntity.billboard.rotation = -Cesium.Math.toRadians(yaw);
-
-      if (headingLineEntity) {
-        const lineLen = Math.max(85.0, speed * 4.5);
-        const dest = computeDestinationPoint(lat, lon, yaw, lineLen);
-        headingLineEntity.polyline.positions = [
-          dronePos,
-          Cesium.Cartesian3.fromDegrees(dest.lon, dest.lat, alt)
-        ];
-      }
-
-      if (altitudeDropLineEntity) {
-        altitudeDropLineEntity.polyline.positions = [dronePos, groundPos];
-      }
-
-      if (altitudeLabelEntity) {
-        altitudeLabelEntity.position = midPos;
-        altitudeLabelEntity.label.text = `ALT: ${alt.toFixed(1)} m`;
-      }
-    }
-
-    if (!isEngaged) {
-      setTargetMapVisibility(false);
-      lastTgtLat = null;
-      lastTgtLon = null;
-      return;
-    }
-
-    if (lockedTarget) {
-      const hfov = hudState.cameraHfovDeg || 80.0;
-      const vfov = hudState.cameraVfovDeg || 60.0;
-      const tiltDeg = hudState.cameraTiltDeg || 30.0;
-
-      const errX = Number(lockedTarget.err_x || 0);
-      const errY = Number(lockedTarget.err_y || 0);
-      const estDist = Number(lockedTarget.est_dist_m || 140.0);
-
-      const bearingDeg = (yaw + errX * (hfov / 2.0) + 360.0) % 360.0;
-      const elevDeg = pitch + tiltDeg - (errY * (vfov / 2.0));
-      const elevRad = (elevDeg * Math.PI) / 180.0;
-
-      const horizDist = Math.max(15.0, estDist * Math.cos(elevRad));
-      const estAlt = Math.max(2.0, alt + estDist * Math.sin(elevRad));
-      const tgtCoord = computeDestinationPoint(lat, lon, bearingDeg, horizDist);
-
-      hudState.estTargetLat = tgtCoord.lat;
-      hudState.estTargetLon = tgtCoord.lon;
-      hudState.estTargetAlt = estAlt;
-      hudState.estTargetLabel = `TD-${String(lockedTarget.id).padStart(2, "0")} [${lockedTarget.cls_label || "TGT"}] ~${Math.round(estDist)}m`;
-    } else if (hudState.estTargetLat === null) {
-      const dest = computeDestinationPoint(lat, lon, yaw, 140.0);
-      hudState.estTargetLat = dest.lat;
-      hudState.estTargetLon = dest.lon;
-      hudState.estTargetAlt = Math.max(5.0, alt);
-      hudState.estTargetLabel = "ESTIMATED TGT";
-    }
-
-    setTargetMapVisibility(true);
-
-    if (
-      hudState.estTargetLat !== lastTgtLat ||
-      hudState.estTargetLon !== lastTgtLon ||
-      hudState.estTargetAlt !== lastTgtAlt ||
-      droneChanged
-    ) {
-      lastTgtLat = hudState.estTargetLat;
-      lastTgtLon = hudState.estTargetLon;
-      lastTgtAlt = hudState.estTargetAlt;
-
-      const tgtPos = Cesium.Cartesian3.fromDegrees(hudState.estTargetLon, hudState.estTargetLat, hudState.estTargetAlt);
-      const tgtGroundPos = Cesium.Cartesian3.fromDegrees(hudState.estTargetLon, hudState.estTargetLat, 0.0);
-
-      if (targetEntity) targetEntity.position = tgtPos;
-      if (targetLabelEntity) {
-        targetLabelEntity.position = tgtPos;
-        targetLabelEntity.label.text = hudState.estTargetLabel;
-      }
-      if (targetDropLineEntity) {
-        targetDropLineEntity.polyline.positions = [tgtPos, tgtGroundPos];
-      }
-      if (engagementLinkEntity) {
-        engagementLinkEntity.polyline.positions = [dronePos, tgtPos];
-      }
-    }
-  }
-
-  function updateTakeoffLandButtons() {
-    const btnBottom = document.getElementById("btn-bottom-takeoff-land");
-    if (!btnBottom) return;
-
-    if (hudState.inAir) {
-      btnBottom.innerText = "⬇ İNİŞ";
-      btnBottom.style.borderColor = "var(--hud-amber)";
-      btnBottom.style.color = "var(--hud-amber)";
-    } else {
-      btnBottom.innerText = "⬆ KALKIŞ";
-      btnBottom.style.borderColor = "var(--hud-cyan)";
-      btnBottom.style.color = "var(--hud-cyan)";
-    }
-  }
-
-  ws.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    const t = data.telemetry;
-
-    hudState.targetPitch = t.pitch || 0;
-    hudState.targetRoll = t.roll || 0;
-    hudState.targetYaw = (t.yaw || 0) % 360;
-    hudState.targetAlt = t.alt !== undefined ? t.alt : 0;
-    hudState.targetSpeed = t.groundspeed || 0;
-    hudState.airspeed = t.airspeed || 0;
-    hudState.climb = t.climb || 0;
-    hudState.throttle = t.throttle || 0;
-    hudState.battery_v = t.battery_v || 0;
-    hudState.satellites = t.satellites || 0;
-    hudState.armed = Boolean(t.armed);
-    hudState.inAir = t.in_air !== undefined ? Boolean(t.in_air) : (hudState.targetAlt > 1.0);
-    hudState.mode = t.mode || "STBY";
-    hudState.engaged = Boolean(t.engaged || data.locked_target_id !== null);
-    hudState.lockedTargetId = data.locked_target_id;
-    hudState.aiStatus = data.model_status || "INIT";
-    hudState.activeCam = data.active_camera || "WIDE";
-
-    if (t.lat && t.lon) {
-      hudState.lat = t.lat;
-      hudState.lon = t.lon;
-    }
-    if (t.home_lat && t.home_lon) {
-      hudState.homeLat = t.home_lat;
-      hudState.homeLon = t.home_lon;
-    }
-
-    const lockedObj = (data.targets || []).find(item => item.locked) || null;
-    const engagedNow = Boolean(t.engaged || data.locked_target_id !== null);
-
-    updateCesiumDroneFromTelemetry(
-      hudState.lat,
-      hudState.lon,
-      hudState.targetAlt,
-      hudState.targetYaw,
-      hudState.targetPitch,
-      hudState.targetSpeed,
-      hudState.homeLat,
-      hudState.homeLon,
-      engagedNow,
-      lockedObj
-    );
-
-    updateTakeoffLandButtons();
-
-    if (!data.active_cam_online) {
-      noSigBanner.style.display = "block";
-      document.getElementById("ns-cam").innerText = `${data.active_camera} (${data.active_cam_status})`;
-    } else {
-      noSigBanner.style.display = "none";
-    }
-
-    const mavInd = document.getElementById("mav-indicator");
-    mavInd.innerText = t.status_msg;
-    mavInd.style.borderColor = t.connected ? "var(--hud-green)" : "var(--hud-amber)";
-
-    const zoomTag = (data.cpdd && data.cpdd.zoom > 1.0) ? ` ${data.cpdd.zoom}X` : "";
-    const camModeText = data.auto_camera ? `AUTO [${data.active_camera}${zoomTag}]` : `${data.active_camera}${zoomTag}`;
-    document.getElementById("cam-indicator").innerText = camModeText;
-
-    if (data.perf) {
-      const fpsEl = document.getElementById("fps-indicator");
-      if (fpsEl) {
-        fpsEl.innerText = `CAM:${data.perf.cam_fps} | OUT:${data.perf.out_fps}fps (${data.perf.infer_ms}ms)`;
-        fpsEl.style.borderColor = data.perf.out_fps < 10 ? "var(--hud-red)" : (data.perf.out_fps < 18 ? "var(--hud-amber)" : "var(--hud-cyan)");
-        fpsEl.style.color = data.perf.out_fps < 10 ? "#ff6b63" : (data.perf.out_fps < 18 ? "var(--hud-amber)" : "var(--hud-cyan)");
-      }
-      const sumEl = document.getElementById("log-perf-summary");
-      if (sumEl) {
-        sumEl.innerText = `${data.perf.device} | ${data.perf.decoder} | ${data.perf.res} | AI:${data.perf.infer_ms}ms`;
-      }
-    }
-
-    if (data.logs && logsVisible) {
-      const logBox = document.getElementById("live-log-lines");
-      if (logBox) {
-        logBox.innerHTML = data.logs.map(line => `<div>${line}</div>`).join("");
-        const drawer = document.getElementById("live-log-drawer");
-        if (drawer) drawer.scrollTop = drawer.scrollHeight;
-      }
-    }
-
-    const bottomModeEl = document.getElementById("bottom-mode-display");
-    if (hudState.engaged) {
-      const engText = `INTERCEPT // TD-${String(data.locked_target_id).padStart(2, "0")}`;
-      if (bottomModeEl) {
-        bottomModeEl.innerText = engText;
-        bottomModeEl.classList.add("engaged");
-      }
-      abortBtn.style.display = "inline-flex";
-    } else {
-      if (bottomModeEl) {
-        bottomModeEl.innerText = `MOD: ${t.mode}`;
-        bottomModeEl.classList.remove("engaged");
-      }
-      abortBtn.style.display = "none";
-    }
-
-    const modeSelectEl = document.getElementById("flight-mode-select");
-    if (modeSelectEl && document.activeElement !== modeSelectEl) {
-      const activeMode = hudState.engaged ? "INTERCEPT" : (t.mode || "STBY");
-      if ([...modeSelectEl.options].some(o => o.value === activeMode)) {
-        modeSelectEl.value = activeMode;
-      }
-    }
-
-    renderTargetPods(data.targets);
-  };
-
-  function toggleTakeoffLand() {
-    if (hudState.inAir) {
-      sendFlightCmd("LAND");
-    } else {
-      document.getElementById("takeoff-alt-input").value = 50;
-      document.getElementById("takeoff-modal").style.display = "flex";
-    }
-  }
-
-  function setTakeoffPreset(meters) {
-    document.getElementById("takeoff-alt-input").value = meters;
-  }
-
-  function closeTakeoffModal() {
-    document.getElementById("takeoff-modal").style.display = "none";
-  }
-
-  async function confirmTakeoff() {
-    const altVal = parseFloat(document.getElementById("takeoff-alt-input").value) || 50.0;
-    closeTakeoffModal();
-    await sendFlightCmd("TAKEOFF", altVal);
-  }
-
-  async function onFlightModeSelect(newMode) {
-    if (!newMode) return;
-    hudState.engaged = false;
-    hudState.lockedTargetId = null;
-    abortBtn.style.display = "none";
-    setTargetMapVisibility(false);
-    await fetch("/api/set_mode", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: newMode })
-    });
-  }
-
-  async function sendFlightCmd(cmd, alt = 50.0) {
-    if (cmd !== "INTERCEPT") {
-      hudState.engaged = false;
-      hudState.lockedTargetId = null;
-      abortBtn.style.display = "none";
-      setTargetMapVisibility(false);
-    }
-    await fetch("/api/flight_cmd", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cmd: cmd, alt: alt })
-    });
-  }
-
-  const canvas = document.getElementById("hud-canvas");
-  const ctx = canvas.getContext("2d");
-
-  function resizeHudCanvas() {
-    const stage = document.getElementById("camera-stage");
-    canvas.width = stage.clientWidth || window.innerWidth;
-    canvas.height = stage.clientHeight || window.innerHeight;
-  }
-  window.addEventListener("resize", resizeHudCanvas);
-  resizeHudCanvas();
-
-  function lerpAngle(a, b, t) {
-    let diff = ((b - a + 540) % 360) - 180;
-    return (a + diff * t + 360) % 360;
-  }
-
-  function renderFighterJetHUD() {
-    hudState.pitch += (hudState.targetPitch - hudState.pitch) * 0.25;
-    hudState.roll += (hudState.targetRoll - hudState.roll) * 0.25;
-    hudState.yaw = lerpAngle(hudState.yaw, hudState.targetYaw, 0.25);
-    hudState.alt += (hudState.targetAlt - hudState.alt) * 0.25;
-    hudState.speed += (hudState.targetSpeed - hudState.speed) * 0.25;
-
-    const W = canvas.width;
-    const H = canvas.height;
-    const cx = W / 2;
-    const cy = H / 2;
-
-    const hudColor = "#39ff5a";
-    ctx.clearRect(0, 0, W, H);
-
-    const isMini = W < 420;
-
-    ctx.save();
-    ctx.globalAlpha = 0.42;
-    ctx.strokeStyle = hudColor;
-    ctx.fillStyle = hudColor;
-    ctx.shadowColor = "rgba(57, 255, 90, 0.25)";
-    ctx.shadowBlur = 2;
-    ctx.lineWidth = 1.1;
-    ctx.font = "bold 11px Consolas, monospace";
-
-    const vfov = Math.max(20.0, hudState.cameraVfovDeg || 60.0);
-    const pxPerDeg = H / vfov;
-    const ladderWidth = isMini ? W * 0.34 : Math.min(180, W * 0.21);
-    const gapHalf = isMini ? 18 : 34;
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(cx - ladderWidth - 40, isMini ? 24 : 78, (ladderWidth + 40) * 2, H - (isMini ? 36 : 145));
-    ctx.clip();
-
-    ctx.translate(cx, cy);
-    ctx.rotate((-hudState.roll * Math.PI) / 180);
-    const netHorizonOffsetDeg = hudState.pitch + (hudState.cameraTiltDeg || 0.0);
-    ctx.translate(0, netHorizonOffsetDeg * pxPerDeg);
-
-    const hLen = ladderWidth * 1.2;
-    ctx.lineWidth = 1.3;
-    ctx.beginPath();
-    ctx.moveTo(-hLen, 0);
-    ctx.lineTo(-gapHalf, 0);
-    ctx.moveTo(gapHalf, 0);
-    ctx.lineTo(hLen, 0);
-    ctx.stroke();
-
-    ctx.restore();
-
-    ctx.lineWidth = 1.4;
-    const wScale = isMini ? 0.55 : 0.85;
-    ctx.beginPath();
-    ctx.moveTo(cx - 30 * wScale, cy);
-    ctx.lineTo(cx - 12 * wScale, cy);
-    ctx.lineTo(cx - 6 * wScale, cy + 6 * wScale);
-    ctx.lineTo(cx, cy);
-    ctx.lineTo(cx + 6 * wScale, cy + 6 * wScale);
-    ctx.lineTo(cx + 12 * wScale, cy);
-    ctx.lineTo(cx + 30 * wScale, cy);
-    ctx.stroke();
-
-    if (!isMini) {
-      const bankRadius = Math.min(155, H * 0.27);
-      const bankAngles = [-60, -45, -30, -15, 0, 15, 30, 45, 60];
-      ctx.lineWidth = 1.1;
-
-      bankAngles.forEach(ang => {
-        const rad = ((ang - 90) * Math.PI) / 180;
-        const tickLen = (ang % 30 === 0) ? 9 : 5;
-        const x1 = cx + Math.cos(rad) * bankRadius;
-        const y1 = cy + Math.sin(rad) * bankRadius;
-        const x2 = cx + Math.cos(rad) * (bankRadius + tickLen);
-        const y2 = cy + Math.sin(rad) * (bankRadius + tickLen);
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
-      });
-
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate((-hudState.roll * Math.PI) / 180);
-      ctx.beginPath();
-      ctx.moveTo(0, -bankRadius + 2);
-      ctx.lineTo(-5, -bankRadius + 10);
-      ctx.lineTo(5, -bankRadius + 10);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-
-      const tapeW = 54;
-      const tapeH = Math.min(220, H * 0.42);
-      const spdX = Math.max(14, cx - ladderWidth - 95);
-      const tapeTop = cy - tapeH / 2;
-
-      ctx.lineWidth = 1.1;
-      ctx.beginPath();
-      ctx.moveTo(spdX + tapeW, tapeTop);
-      ctx.lineTo(spdX + tapeW, tapeTop + tapeH);
-      ctx.stroke();
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(spdX - 6, tapeTop, tapeW + 10, tapeH);
-      ctx.clip();
-
-      const spdPxPerUnit = 5.2;
-      const minSpd = Math.floor(hudState.speed - 25);
-      const maxSpd = Math.ceil(hudState.speed + 25);
-
-      ctx.font = "10px Consolas, monospace";
-      ctx.textAlign = "right";
-      for (let s = minSpd; s <= maxSpd; s++) {
-        if (s < 0) continue;
-        const y = cy - (s - hudState.speed) * spdPxPerUnit;
-        if (s % 5 === 0) {
-          ctx.beginPath();
-          ctx.moveTo(spdX + tapeW - 8, y);
-          ctx.lineTo(spdX + tapeW, y);
-          ctx.stroke();
-          ctx.fillText(s.toString(), spdX + tapeW - 11, y + 3);
-        } else if (s % 1 === 0) {
-          ctx.beginPath();
-          ctx.moveTo(spdX + tapeW - 4, y);
-          ctx.lineTo(spdX + tapeW, y);
-          ctx.stroke();
-        }
-      }
-      ctx.restore();
-
-      ctx.fillStyle = "rgba(3, 10, 5, 0.65)";
-      ctx.fillRect(spdX - 2, cy - 11, tapeW, 22);
-      ctx.strokeRect(spdX - 2, cy - 11, tapeW, 22);
-      ctx.fillStyle = hudColor;
-      ctx.font = "bold 12px Consolas, monospace";
-      ctx.textAlign = "right";
-      ctx.fillText(hudState.speed.toFixed(1), spdX + tapeW - 5, cy + 4);
-
-      ctx.font = "bold 9px Consolas, monospace";
-      ctx.textAlign = "left";
-      ctx.fillText("SPD m/s", spdX, tapeTop - 6);
-      ctx.fillText(`THR ${hudState.throttle}%`, spdX, tapeTop + tapeH + 13);
-      ctx.fillText(`BAT ${hudState.battery_v.toFixed(1)}V`, spdX, tapeTop + tapeH + 25);
-      ctx.fillText(`${hudState.armed ? "ARMED" : "DISARM"}`, spdX, tapeTop + tapeH + 37);
-
-      const altX = Math.min(W - tapeW - 14, cx + ladderWidth + 41);
-
-      ctx.beginPath();
-      ctx.moveTo(altX, tapeTop);
-      ctx.lineTo(altX, tapeTop + tapeH);
-      ctx.stroke();
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(altX - 4, tapeTop, tapeW + 18, tapeH);
-      ctx.clip();
-
-      const altPxPerUnit = 3.8;
-      const minAlt = Math.floor(hudState.alt - 35);
-      const maxAlt = Math.ceil(hudState.alt + 35);
-
-      ctx.font = "10px Consolas, monospace";
-      ctx.textAlign = "left";
-      for (let a = minAlt; a <= maxAlt; a++) {
-        const y = cy - (a - hudState.alt) * altPxPerUnit;
-        if (a % 10 === 0) {
-          ctx.beginPath();
-          ctx.moveTo(altX, y);
-          ctx.lineTo(altX + 8, y);
-          ctx.stroke();
-          ctx.fillText(a.toString(), altX + 11, y + 3);
-        } else if (a % 2 === 0) {
-          ctx.beginPath();
-          ctx.moveTo(altX, y);
-          ctx.lineTo(altX + 4, y);
-          ctx.stroke();
-        }
-      }
-      ctx.restore();
-
-      ctx.fillStyle = "rgba(3, 10, 5, 0.65)";
-      ctx.fillRect(altX + 2, cy - 11, tapeW + 4, 22);
-      ctx.strokeRect(altX + 2, cy - 11, tapeW + 4, 22);
-      ctx.fillStyle = hudColor;
-      ctx.font = "bold 12px Consolas, monospace";
-      ctx.textAlign = "left";
-      ctx.fillText(hudState.alt.toFixed(1), altX + 6, cy + 4);
-
-      ctx.font = "bold 9px Consolas, monospace";
-      ctx.fillText("ALT m", altX, tapeTop - 6);
-      ctx.fillText(`VSI ${hudState.climb >= 0 ? "+" : ""}${hudState.climb.toFixed(1)}`, altX, tapeTop + tapeH + 13);
-      ctx.fillText(`P:${hudState.pitch.toFixed(0)}° R:${hudState.roll.toFixed(0)}°`, altX, tapeTop + tapeH + 25);
-
-      const hdgW = Math.min(280, W * 0.34);
-      const hdgY = 48;
-      const hdgLeft = cx - hdgW / 2;
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(hdgLeft, hdgY - 10, hdgW, 32);
-      ctx.clip();
-
-      const pxPerDegHdg = 3.8;
-      const startDeg = Math.floor(hudState.yaw - 40);
-      const endDeg = Math.ceil(hudState.yaw + 40);
-
-      ctx.font = "bold 10px Consolas, monospace";
-      ctx.textAlign = "center";
-
-      const cardinals = { 0: "N", 45: "NE", 90: "E", 135: "SE", 180: "S", 225: "SW", 270: "W", 315: "NW" };
-
-      for (let d = startDeg; d <= endDeg; d++) {
-        const normDeg = ((d % 360) + 360) % 360;
-        const x = cx + (d - hudState.yaw) * pxPerDegHdg;
-
-        if (normDeg % 10 === 0) {
-          ctx.beginPath();
-          ctx.moveTo(x, hdgY + 12);
-          ctx.lineTo(x, hdgY + 19);
-          ctx.stroke();
-
-          const label = cardinals[normDeg] || String(normDeg).padStart(3, "0");
-          ctx.fillText(label, x, hdgY + 9);
-        } else if (normDeg % 5 === 0) {
-          ctx.beginPath();
-          ctx.moveTo(x, hdgY + 15);
-          ctx.lineTo(x, hdgY + 19);
-          ctx.stroke();
-        }
-      }
-      ctx.restore();
-
-      const hdgInt = Math.round(hudState.yaw) % 360;
-      ctx.fillStyle = "rgba(3, 10, 5, 0.65)";
-      ctx.fillRect(cx - 21, hdgY - 3, 42, 18);
-      ctx.strokeRect(cx - 21, hdgY - 3, 42, 18);
-      ctx.fillStyle = hudColor;
-      ctx.font = "bold 11px Consolas, monospace";
-      ctx.textAlign = "center";
-      ctx.fillText(String(hdgInt).padStart(3, "0") + "°", cx, hdgY + 10);
-    }
-
-    ctx.restore();
-    requestAnimationFrame(renderFighterJetHUD);
-  }
-
-  requestAnimationFrame(renderFighterJetHUD);
-
-  function renderTargetPods(targets) {
-    if (!targets || targets.length === 0) {
-      if (targetsDock.innerHTML !== "") {
-        targetsDock.innerHTML = "";
-        lastTargetsSignature = "";
-      }
-      return;
-    }
-
-    const sig = `${targets.length}#` + targets.map(t => `${t.id}:${t.locked}`).join("|");
-    if (sig !== lastTargetsSignature) {
-      lastTargetsSignature = sig;
-      targetsDock.innerHTML = "";
-      targets.forEach(tgt => {
-        const pod = document.createElement("div");
-        pod.className = "target-pod" + (tgt.locked ? " locked" : "");
-        pod.dataset.targetId = tgt.id;
-
-        const idStr = String(tgt.id).padStart(2, "0");
-        pod.innerHTML = `
-          <img id="pod-img-${tgt.id}" src="data:image/jpeg;base64,${tgt.thumbnail}" alt="TD-${idStr}">
-          <div class="pod-meta">
-            <span>TD-${idStr} <span style="color:var(--hud-cyan);font-size:9px;">[${tgt.cls_label || "TGT"}]</span></span>
-            <span id="pod-conf-${tgt.id}">~${Math.round(tgt.est_dist_m || 0)}m</span>
-          </div>
-          <div class="pod-action">${tgt.locked ? (targets.length === 1 ? "KİLİTLİ [İPTAL]" : "KİLİTLİ") : "ANGAJMAN"}</div>
-        `;
-        targetsDock.appendChild(pod);
-      });
-    } else {
-      targets.forEach(tgt => {
-        const imgEl = document.getElementById(`pod-img-${tgt.id}`);
-        if (imgEl && tgt.thumbnail) {
-          imgEl.src = `data:image/jpeg;base64,${tgt.thumbnail}`;
-        }
-        const confEl = document.getElementById(`pod-conf-${tgt.id}`);
-        if (confEl) {
-          confEl.innerText = `~${Math.round(tgt.est_dist_m || 0)}m`;
-        }
-      });
-    }
-  }
-
-  targetsDock.addEventListener("pointerdown", (e) => {
-    const pod = e.target.closest(".target-pod");
-    if (!pod) return;
+}
+
+const _fpMap = { connection:'panel-connection', log:'panel-log', settings:'settings-modal', ai:'ai-modules-modal' };
+const _sbMap = { connection:'sb-connection', log:'sb-log', settings:'sb-settings', ai:'sb-ai' };
+
+function fpToggle(name) {
+  const el = document.getElementById(_fpMap[name]);
+  if (!el) return;
+  const open = !el.classList.contains('open');
+  el.classList.toggle('open', open);
+  const sb = document.getElementById(_sbMap[name]);
+  if (sb) sb.classList.toggle('active', open);
+  if (name === 'ai' && open) { loadAiModules(); loadFolders(); loadAiProfiles(); }
+  if (name === 'settings' && open) { _loadSettingsValues(); }
+}
+function fpClose(name) { fpToggle(name); }
+function openAiModules() { fpToggle('ai'); }
+function closeAiModules() { const el = document.getElementById('ai-modules-modal'); if (el) { el.classList.remove('open'); const sb = document.getElementById('sb-ai'); if (sb) sb.classList.remove('active'); } }
+function openSettings() { fpToggle('settings'); }
+function closeSettings() { const el = document.getElementById('settings-modal'); if (el) { el.classList.remove('open'); const sb = document.getElementById('sb-settings'); if (sb) sb.classList.remove('active'); } }
+
+/* floating panel drag */
+function makeFpDraggable(elId, headId) {
+  const el = document.getElementById(elId);
+  const head = document.getElementById(headId);
+  if (!el || !head) return;
+  let sx, sy, sl, st;
+  head.addEventListener('mousedown', e => {
+    if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    sx = e.clientX; sy = e.clientY;
+    const r = el.getBoundingClientRect();
+    sl = r.left; st = r.top;
+    el.style.left = sl + 'px'; el.style.top = st + 'px';
+    el.style.right = 'auto'; el.style.bottom = 'auto';
+    function mv(e2) { el.style.left = (sl + e2.clientX - sx) + 'px'; el.style.top = (st + e2.clientY - sy) + 'px'; }
+    function up() { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); }
+    document.addEventListener('mousemove', mv);
+    document.addEventListener('mouseup', up);
     e.preventDefault();
-    e.stopPropagation();
-    const targetId = parseInt(pod.dataset.targetId, 10);
-    if (isNaN(targetId)) return;
-
-    const totalPods = targetsDock.querySelectorAll(".target-pod").length;
-    const isPodLocked = pod.classList.contains("locked") || (hudState.engaged && hudState.lockedTargetId === targetId);
-
-    if (totalPods === 1 && isPodLocked) {
-      abortEngagement();
-      return;
-    }
-
-    lockTarget(targetId);
   });
-
-  async function lockTarget(targetId) {
-    hudState.engaged = true;
-    hudState.lockedTargetId = targetId;
-    abortBtn.style.display = "inline-flex";
-
-    await fetch("/api/lock", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ target_id: targetId })
-    });
-  }
-
-  async function abortEngagement() {
-    hudState.engaged = false;
-    hudState.lockedTargetId = null;
-    abortBtn.style.display = "none";
-    setTargetMapVisibility(false);
-    await fetch("/api/abort", { method: "POST" });
-  }
-
-  async function sendCpddRawText() {
-    const cmd = document.getElementById("cfg-cpdd-text-cmd").value.trim();
-    const out = document.getElementById("cpdd-raw-reply");
-    if (!cmd) return;
-    out.innerText = "Gönderiliyor...";
-    const res = await fetch("/api/cpdd/raw", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: "TEXT", text_cmd: cmd })
-    });
-    const d = await res.json();
-    out.style.color = "var(--hud-green)";
-    out.innerText = "Yanıt: " + (d.reply || "OK");
-  }
-
-  async function sendCpddRawHex() {
-    const tb = document.getElementById("cfg-cpdd-hex-b").value.trim();
-    const tcd = document.getElementById("cfg-cpdd-hex-cd").value.trim();
-    const out = document.getElementById("cpdd-raw-reply");
-    const res = await fetch("/api/cpdd/raw", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: "HEX", type_b: tb, type_cd: tcd })
-    });
-    const d = await res.json();
-    out.style.color = "var(--hud-cyan)";
-    out.innerText = d.reply || "HEX gönderildi";
-  }
-
-  async function sendCpddCmd(action) {
-    await fetch("/api/cpdd/cmd", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: action })
-    });
-  }
-
-  function onCpddIpInput() {
-    const ipVal = document.getElementById("cfg-cpdd-ip").value.trim();
-    const rtspInput = document.getElementById("cfg-cpdd-rtsp");
-    if (ipVal && rtspInput) {
-      rtspInput.value = `rtsp://${ipVal}/live/0`;
+}
+function makeFpResizable(elId, resId) {
+  const el = document.getElementById(elId);
+  const res = document.getElementById(resId);
+  if (!el || !res) return;
+  res.addEventListener('mousedown', e => {
+    e.preventDefault();
+    const sw = el.offsetWidth, sh = el.offsetHeight, ex = e.clientX, ey = e.clientY;
+    function mv(e2) {
+      el.style.width = Math.max(300, sw + e2.clientX - ex) + 'px';
+      el.style.height = Math.max(150, sh + e2.clientY - ey) + 'px';
     }
-  }
+    function up() { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); }
+    document.addEventListener('mousemove', mv);
+    document.addEventListener('mouseup', up);
+  });
+}
+document.addEventListener('DOMContentLoaded', () => {
+  makeFpDraggable('panel-connection','fp-connection-head'); makeFpResizable('panel-connection','fp-connection-resize');
+  makeFpDraggable('panel-log','fp-log-head'); makeFpResizable('panel-log','fp-log-resize');
+  makeFpDraggable('settings-modal','fp-settings-head'); makeFpResizable('settings-modal','fp-settings-resize');
+  makeFpDraggable('ai-modules-modal','fp-ai-head'); makeFpResizable('ai-modules-modal','fp-ai-resize');
 
-  async function setCamera(mode) {
-    document.querySelectorAll(".sensor-group .tac-btn").forEach(b => b.classList.remove("active"));
-    const activeBtn = document.getElementById(`btn-${mode}`);
-    if (activeBtn) activeBtn.classList.add("active");
+  /* Video stream bağlantı watchdog */
+  (function videoStreamWatchdog() {
+    const vs = document.getElementById('video-stream');
+    if (!vs) return;
+    let lastW = 0, staleCount = 0;
 
-    await fetch("/api/camera", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: mode })
-    });
-  }
+    vs.onerror = function() {
+      setTimeout(() => { vs.src = '/video_feed?' + Date.now(); }, 1500);
+    };
 
-  function onTestTypeChange() {
-    const tType = document.getElementById("cfg-test-type").value;
-    const boxDataset = document.getElementById("box-dataset-select");
-    const boxCustom = document.getElementById("box-custom-source");
-    const btnScan = document.getElementById("btn-scan-cam");
-    const lblCustom = document.getElementById("lbl-custom-source");
-    const inpCustom = document.getElementById("cfg-cam-webcam");
-
-    if (tType === "DATASET") {
-      boxDataset.style.display = "flex";
-      boxCustom.style.display = "none";
-    } else if (tType === "WEBCAM") {
-      boxDataset.style.display = "none";
-      boxCustom.style.display = "flex";
-      btnScan.style.display = "inline-flex";
-      lblCustom.innerText = "Kamera İndeksi";
-      if (!/^\d+$/.test(inpCustom.value.trim())) inpCustom.value = "0";
-    } else {
-      boxDataset.style.display = "none";
-      boxCustom.style.display = "flex";
-      btnScan.style.display = "none";
-      lblCustom.innerText = "Video Yolu (.mp4)";
-      if (inpCustom.value.startsWith("dataset:") || /^\d+$/.test(inpCustom.value.trim())) {
-        inpCustom.value = "";
-      }
-    }
-  }
-
-  async function populateDatasetDropdown(selectedFolder) {
-    const sel = document.getElementById("cfg-dataset-folder");
-    sel.innerHTML = "";
-
-    let folderMeta = {};
-    try {
-      const res = await fetch("/api/dataset_folders");
-      const data = await res.json();
-      if (data.folders) {
-        data.folders.forEach(f => { folderMeta[f.name] = f; });
-      }
-    } catch (e) {}
-
-    for (let i = 1; i <= 20; i++) {
-      const fname = `video${String(i).padStart(2, "0")}`;
-      const opt = document.createElement("option");
-      opt.value = fname;
-      const meta = folderMeta[fname];
-      if (meta && meta.exists) {
-        opt.text = `${fname} (${meta.count} kare)`;
+    setInterval(() => {
+      const w = vs.naturalWidth;
+      if (w === 0) {
+        staleCount++;
+        if (staleCount >= 3) {
+          vs.src = '/video_feed?' + Date.now();
+          staleCount = 0;
+        }
       } else {
-        opt.text = `${fname} (Yok)`;
+        staleCount = 0;
+        lastW = w;
       }
-      sel.appendChild(opt);
-    }
+    }, 3000);
+  })();
+});
 
-    sel.value = selectedFolder || "video01";
+/* view divider drag (kamera-harita oranı) */
+(function() {
+  const div = document.getElementById('view-divider');
+  if (!div) return;
+  let dragging = false, sx, camW, mapW, totalW;
+  div.addEventListener('mousedown', e => {
+    dragging = true; sx = e.clientX;
+    const camEl = document.getElementById('camera-wrap');
+    const mapEl = document.getElementById('map-wrap');
+    camW = camEl.offsetWidth; mapW = mapEl.offsetWidth; totalW = camW + mapW;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const delta = e.clientX - sx;
+    const newCam = Math.max(200, Math.min(totalW - 200, camW + delta));
+    const newMap = totalW - newCam;
+    document.getElementById('camera-wrap').style.flex = 'none';
+    document.getElementById('camera-wrap').style.width = newCam + 'px';
+    document.getElementById('map-wrap').style.flex = 'none';
+    document.getElementById('map-wrap').style.width = newMap + 'px';
+    resizeHudCanvas();
+    if (cesiumViewer) cesiumViewer.resize();
+  });
+  document.addEventListener('mouseup', () => { dragging = false; });
+})();
+
+/* clock */
+(function() {
+  function tick() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2,'0');
+    const m = String(now.getMinutes()).padStart(2,'0');
+    const s = String(now.getSeconds()).padStart(2,'0');
+    const el = document.getElementById('tb-clock');
+    if (el) el.textContent = h + ':' + m + ':' + s;
   }
+  tick(); setInterval(tick, 1000);
+})();
 
-  async function scanWebcams() {
-    try {
-      const res = await fetch("/api/scan_webcams");
-      const data = await res.json();
-      if (data.webcams && data.webcams.length > 0) {
-        document.getElementById("cfg-cam-webcam").value = data.webcams[0];
-      }
-    } catch (e) {}
-  }
+/* ═══════════════════════════════════════
+   SETTINGS TAB
+═══════════════════════════════════════ */
+function switchSettingsTab(tabId) {
+  document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.settings-tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelector(`.settings-tab[data-tab="${tabId}"]`)?.classList.add('active');
+  document.getElementById(tabId)?.classList.add('active');
+}
 
-  function onProtocolChange() {
-    const proto = document.getElementById("cfg-tel-proto").value;
-    const hostInput = document.getElementById("cfg-tel-host");
-    const portInput = document.getElementById("cfg-tel-port");
-    const lblHost = document.getElementById("lbl-tel-host");
+function toggleBrowserFullscreen() {
+  const docEl = document.documentElement;
+  const isFs = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement;
+  if (!isFs) { if (docEl.requestFullscreen) docEl.requestFullscreen().catch(()=>{}); else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen(); }
+  else { if (document.exitFullscreen) document.exitFullscreen().catch(()=>{}); else if (document.webkitExitFullscreen) document.webkitExitFullscreen(); }
+}
+document.addEventListener('fullscreenchange', () => { setTimeout(() => { resizeHudCanvas(); if (cesiumViewer) { cesiumViewer.resize(); cesiumViewer.scene.requestRender(); } }, 80); });
 
-    if (proto === "SITL") {
-      lblHost.innerText = "Simülasyon";
-      hostInput.value = "DAHİLİ SITL";
-      hostInput.disabled = true;
-      portInput.disabled = true;
-    } else if (proto === "TCP") {
-      hostInput.disabled = false;
-      portInput.disabled = false;
-      lblHost.innerText = "Hedef IP";
-      if (hostInput.value === "0.0.0.0" || hostInput.value === "DAHİLİ SITL") hostInput.value = "127.0.0.1";
-      if (portInput.value === "14550") portInput.value = "5760";
-    } else if (proto === "TCPIN") {
-      hostInput.disabled = false;
-      portInput.disabled = false;
-      lblHost.innerText = "Dinleme IP";
-      if (hostInput.value === "127.0.0.1" || hostInput.value === "DAHİLİ SITL") hostInput.value = "0.0.0.0";
-    } else {
-      hostInput.disabled = false;
-      portInput.disabled = false;
-      lblHost.innerText = "Dinleme IP";
-      if (hostInput.value === "127.0.0.1" || hostInput.value === "DAHİLİ SITL") hostInput.value = "0.0.0.0";
-      if (portInput.value === "5760") portInput.value = "14550";
-    }
-  }
+</script>
 
-  async function openSettings() {
-    document.getElementById("test-report").style.display = "none";
-    const res = await fetch("/api/settings");
-    const s = await res.json();
-
+<script>
+/* ═══════════════════════════════════════
+   COMPAT: panel-open → open class bridge
+═══════════════════════════════════════ */
+function _loadSettingsValues() {
+  document.getElementById("test-report").style.display = "none";
+  switchSettingsTab("tab-drone");
+  fetch("/api/settings").then(r => r.json()).then(s => {
     document.getElementById("cfg-tel-proto").value = s.telemetry_protocol || "SITL";
     document.getElementById("cfg-tel-host").value = s.telemetry_host || "127.0.0.1";
     document.getElementById("cfg-tel-port").value = s.telemetry_port || 5760;
@@ -1986,143 +870,835 @@
       document.getElementById("cfg-tel-host").value = s.telemetry_host || "0.0.0.0";
       document.getElementById("cfg-tel-port").value = s.telemetry_port || 14550;
     }
-
     document.getElementById("cfg-cpdd-ip").value = s.cpdd_ip || "192.168.144.108";
     document.getElementById("cfg-cpdd-udp-port").value = s.cpdd_udp_port || 9554;
     document.getElementById("cfg-cpdd-local-port").value = s.cpdd_local_port || 7002;
     document.getElementById("cfg-cpdd-rtsp").value = s.cpdd_rtsp_url || "rtsp://192.168.144.108/live/0";
-
     document.getElementById("cfg-bing-key").value = s.bing_maps_key || "";
     document.getElementById("cfg-cam-tilt").value = s.camera_tilt_deg !== undefined ? s.camera_tilt_deg : 30;
     document.getElementById("cfg-cam-vfov").value = s.camera_vfov_deg !== undefined ? s.camera_vfov_deg : 60;
-    document.getElementById("cfg-video-base").value = s.video_base_dir || "video";
-
-    const rawTestUrl = s.cameras?.WEBCAM?.url || "dataset:video01";
-    let selectedDataset = "video01";
-
-    if (rawTestUrl.startsWith("dataset:") || /^video\d{1,2}$/i.test(rawTestUrl)) {
-      document.getElementById("cfg-test-type").value = "DATASET";
-      selectedDataset = rawTestUrl.includes(":") ? rawTestUrl.split(":")[1] : rawTestUrl;
-    } else if (/^\d+$/.test(rawTestUrl.trim())) {
-      document.getElementById("cfg-test-type").value = "WEBCAM";
-      document.getElementById("cfg-cam-webcam").value = rawTestUrl.trim();
-    } else {
-      document.getElementById("cfg-test-type").value = "CUSTOM";
-      document.getElementById("cfg-cam-webcam").value = rawTestUrl;
-    }
-
-    await populateDatasetDropdown(selectedDataset);
+    const rawTestUrl = s.cameras?.WEBCAM?.url || "0";
+    if (/^\d+$/.test(rawTestUrl.trim())) { document.getElementById("cfg-test-type").value = "WEBCAM"; document.getElementById("cfg-cam-webcam").value = rawTestUrl.trim(); }
+    else { document.getElementById("cfg-test-type").value = "CUSTOM"; document.getElementById("cfg-cam-webcam").value = rawTestUrl; }
     onTestTypeChange();
-
-    document.getElementById("cfg-model").value = s.yolo_model || "yolov8n.pt";
-    document.getElementById("cfg-conf").value = s.confidence_threshold || 0.45;
-    document.getElementById("cfg-classes").value = s.target_classes || "0, 2, 3, 4, 5, 7, 14";
     document.getElementById("cfg-thrust").value = s.intercept_thrust_max || 1.0;
     document.getElementById("cfg-yaw-gain").value = s.yaw_rate_gain || 1.8;
     document.getElementById("cfg-pitch-gain").value = s.pitch_rate_gain || 1.5;
+  }).catch(()=>{});
+}
 
-    document.getElementById("settings-modal").style.display = "flex";
+/* ═══════════════════════════════════════
+   WEBSOCKET & STATE
+═══════════════════════════════════════ */
+const ws = new WebSocket(`ws://${window.location.host}/ws/telemetry`);
+const targetsDock = document.getElementById("targets-dock");
+const abortBtn = document.getElementById("btn-abort-engagement");
+const noSigBanner = document.getElementById("no-signal-banner");
+
+let lastTargetsSignature = "";
+let isMapFullscreen = false;
+let logsVisible = false;
+
+const hudState = {
+  pitch: 0, targetPitch: 0,
+  roll: 0, targetRoll: 0,
+  yaw: 0, targetYaw: 0,
+  alt: 0, targetAlt: 0,
+  speed: 0, targetSpeed: 0,
+  airspeed: 0, climb: 0, throttle: 0,
+  battery_v: 0, satellites: 0,
+  armed: false, inAir: false,
+  mode: "STBY", engaged: false,
+  lockedTargetId: null, aiStatus: "INIT",
+  activeCam: "WIDE",
+  cameraTiltDeg: 30.0, cameraVfovDeg: 60.0, cameraHfovDeg: 80.0,
+  estTargetLat: null, estTargetLon: null, estTargetAlt: 0, estTargetLabel: "",
+  lat: 39.925533, lon: 32.866287,
+  homeLat: 39.925533, homeLon: 32.866287
+};
+
+/* ═══════════════════════════════════════
+   CESIUM 3D MAP
+═══════════════════════════════════════ */
+let cesiumViewer = null, droneEntity = null, headingLineEntity = null,
+    altitudeDropLineEntity = null, altitudeLabelEntity = null,
+    homeEntity = null, targetEntity = null, targetDropLineEntity = null,
+    targetLabelEntity = null, engagementLinkEntity = null;
+
+function tileXYToQuadKey(x, y, level) {
+  let quadKey = "";
+  for (let i = level; i > 0; i--) {
+    let digit = 0; const mask = 1 << (i - 1);
+    if ((x & mask) !== 0) digit++;
+    if ((y & mask) !== 0) digit += 2;
+    quadKey += digit.toString();
+  }
+  return quadKey;
+}
+
+function createBingAerialProvider(bingKey) {
+  if (bingKey && bingKey.trim().length > 10 && typeof Cesium.BingMapsImageryProvider !== "undefined") {
+    return Cesium.BingMapsImageryProvider.fromUrl("https://dev.virtualearth.net", { key: bingKey.trim(), mapStyle: Cesium.BingMapsStyle.AERIAL });
+  }
+  return Promise.resolve(new Cesium.UrlTemplateImageryProvider({
+    url: "https://ecn.t{s}.tiles.virtualearth.net/tiles/a{quadkey}.jpeg?g=14265",
+    subdomains: ["0","1","2","3"], minimumLevel: 1, maximumLevel: 19,
+    credit: "Microsoft Bing Maps Aerial",
+    customTags: { quadkey: (ip, x, y, level) => tileXYToQuadKey(x, y, level) }
+  }));
+}
+
+function createTarget2DIconDataUrl() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="22" fill="rgba(255,46,46,0.22)" stroke="#ff2e2e" stroke-width="2.5" stroke-dasharray="8 4"/><line x1="32" y1="4" x2="32" y2="18" stroke="#ff2e2e" stroke-width="2.5"/><line x1="32" y1="46" x2="32" y2="60" stroke="#ff2e2e" stroke-width="2.5"/><line x1="4" y1="32" x2="18" y2="32" stroke="#ff2e2e" stroke-width="2.5"/><line x1="46" y1="32" x2="60" y2="32" stroke="#ff2e2e" stroke-width="2.5"/><polygon points="32,22 42,32 32,42 22,32" fill="#ff2e2e" stroke="#ffffff" stroke-width="1.5"/></svg>`;
+  return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
+}
+
+function createDrone2DIconDataUrl() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><line x1="14" y1="14" x2="50" y2="50" stroke="#39ff5a" stroke-width="4" stroke-linecap="round"/><line x1="50" y1="14" x2="14" y2="50" stroke="#39ff5a" stroke-width="4" stroke-linecap="round"/><circle cx="14" cy="14" r="7" fill="rgba(57,255,90,0.25)" stroke="#39ff5a" stroke-width="2.5"/><circle cx="50" cy="14" r="7" fill="rgba(57,255,90,0.25)" stroke="#39ff5a" stroke-width="2.5"/><circle cx="14" cy="50" r="7" fill="rgba(57,255,90,0.25)" stroke="#39ff5a" stroke-width="2.5"/><circle cx="50" cy="50" r="7" fill="rgba(57,255,90,0.25)" stroke="#39ff5a" stroke-width="2.5"/><polygon points="32,6 24,26 32,21 40,26" fill="#ff2e2e" stroke="#ffffff" stroke-width="1.2"/><circle cx="32" cy="32" r="5" fill="#050a07" stroke="#39ff5a" stroke-width="2"/></svg>`;
+  return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
+}
+
+function computeDestinationPoint(latDeg, lonDeg, bearingDeg, distanceMeters) {
+  const R = 6378137.0, brng = (bearingDeg * Math.PI) / 180.0;
+  const lat1 = (latDeg * Math.PI) / 180.0, lon1 = (lonDeg * Math.PI) / 180.0;
+  const lat2 = Math.asin(Math.sin(lat1) * Math.cos(distanceMeters / R) + Math.cos(lat1) * Math.sin(distanceMeters / R) * Math.cos(brng));
+  const lon2 = lon1 + Math.atan2(Math.sin(brng) * Math.sin(distanceMeters / R) * Math.cos(lat1), Math.cos(distanceMeters / R) - Math.sin(lat1) * Math.sin(lat2));
+  return { lat: (lat2 * 180.0) / Math.PI, lon: (lon2 * 180.0) / Math.PI };
+}
+
+async function initCesiumMap() {
+  let bingKey = "";
+  try {
+    const res = await fetch("/api/settings"); const s = await res.json();
+    bingKey = s.bing_maps_key || "";
+    if (s.camera_tilt_deg !== undefined) hudState.cameraTiltDeg = parseFloat(s.camera_tilt_deg);
+    if (s.camera_vfov_deg !== undefined) hudState.cameraVfovDeg = parseFloat(s.camera_vfov_deg);
+  } catch (e) {}
+
+  cesiumViewer = new Cesium.Viewer("cesium-container", {
+    baseLayer: false, baseLayerPicker: false, geocoder: false, homeButton: false,
+    sceneModePicker: false, navigationHelpButton: false, animation: false, timeline: false,
+    fullscreenButton: false, infoBox: false, selectionIndicator: false,
+    terrainProvider: new Cesium.EllipsoidTerrainProvider()
+  });
+
+  const bingProvider = await createBingAerialProvider(bingKey);
+  cesiumViewer.imageryLayers.addImageryProvider(bingProvider);
+  cesiumViewer.scene.globe.enableLighting = false;
+  cesiumViewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#0b1410");
+
+  homeEntity = cesiumViewer.entities.add({ position: Cesium.Cartesian3.fromDegrees(hudState.homeLon, hudState.homeLat, 0), point: { pixelSize: 7, color: Cesium.Color.fromCssColorString("#a78bfa"), outlineColor: Cesium.Color.BLACK, outlineWidth: 2 }, label: { text: "H", font: "bold 10px Consolas", fillColor: Cesium.Color.fromCssColorString("#c4b5fd"), pixelOffset: new Cesium.Cartesian2(0,-12) } });
+
+  const droneIconUrl = createDrone2DIconDataUrl();
+  droneEntity = cesiumViewer.entities.add({ position: Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, hudState.alt), billboard: { image: droneIconUrl, width: 34, height: 34, rotation: -Cesium.Math.toRadians(hudState.yaw), alignedAxis: Cesium.Cartesian3.UNIT_Z, verticalOrigin: Cesium.VerticalOrigin.CENTER, horizontalOrigin: Cesium.HorizontalOrigin.CENTER, disableDepthTestDistance: Number.POSITIVE_INFINITY } });
+
+  const initDest = computeDestinationPoint(hudState.lat, hudState.lon, hudState.yaw, 85.0);
+  headingLineEntity = cesiumViewer.entities.add({ polyline: { positions: [Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, hudState.alt), Cesium.Cartesian3.fromDegrees(initDest.lon, initDest.lat, hudState.alt)], width: 2.2, material: Cesium.Color.fromCssColorString("#ff3b30") } });
+  altitudeDropLineEntity = cesiumViewer.entities.add({ polyline: { positions: [Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, hudState.alt), Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, 0)], width: 1.4, material: new Cesium.PolylineDashMaterialProperty({ color: Cesium.Color.fromCssColorString("#39ff5a"), dashLength: 8.0 }) } });
+  altitudeLabelEntity = cesiumViewer.entities.add({ position: Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, hudState.alt/2), label: { text: `ALT: ${hudState.alt.toFixed(1)} m`, font: "bold 11px Consolas", fillColor: Cesium.Color.fromCssColorString("#39ff5a"), outlineColor: Cesium.Color.BLACK, outlineWidth: 3, style: Cesium.LabelStyle.FILL_AND_OUTLINE, showBackground: true, backgroundColor: new Cesium.Color(0.02,0.06,0.04,0.8), backgroundPadding: new Cesium.Cartesian2(5,2), pixelOffset: new Cesium.Cartesian2(36,0), disableDepthTestDistance: Number.POSITIVE_INFINITY } });
+
+  const targetIconUrl = createTarget2DIconDataUrl();
+  targetEntity = cesiumViewer.entities.add({ show: false, position: Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, 50), billboard: { image: targetIconUrl, width: 32, height: 32, verticalOrigin: Cesium.VerticalOrigin.CENTER, horizontalOrigin: Cesium.HorizontalOrigin.CENTER, disableDepthTestDistance: Number.POSITIVE_INFINITY } });
+  targetLabelEntity = cesiumViewer.entities.add({ show: false, position: Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, 50), label: { text: "TGT", font: "bold 10px Consolas", fillColor: Cesium.Color.fromCssColorString("#ff6b63"), outlineColor: Cesium.Color.BLACK, outlineWidth: 3, style: Cesium.LabelStyle.FILL_AND_OUTLINE, showBackground: true, backgroundColor: new Cesium.Color(0.18,0.02,0.02,0.85), backgroundPadding: new Cesium.Cartesian2(5,2), pixelOffset: new Cesium.Cartesian2(0,-24), disableDepthTestDistance: Number.POSITIVE_INFINITY } });
+  targetDropLineEntity = cesiumViewer.entities.add({ show: false, polyline: { positions: [Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, 50), Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, 0)], width: 1.2, material: new Cesium.PolylineDashMaterialProperty({ color: Cesium.Color.fromCssColorString("#ff2e2e"), dashLength: 6.0 }) } });
+  engagementLinkEntity = cesiumViewer.entities.add({ show: false, polyline: { positions: [Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, hudState.alt), Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat, 50)], width: 1.8, material: new Cesium.PolylineDashMaterialProperty({ color: Cesium.Color.fromCssColorString("#ffaa00"), dashLength: 10.0 }) } });
+
+  cesiumViewer.trackedEntity = undefined;
+  cesiumViewer.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK);
+  cesiumViewer.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+  cesiumViewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(hudState.lon, hudState.lat - 0.004, 450.0), orientation: { heading: Cesium.Math.toRadians(0.0), pitch: Cesium.Math.toRadians(-48.0), roll: 0.0 } });
+}
+
+initCesiumMap();
+
+async function applyBingLayer(bingKey) {
+  if (!cesiumViewer) return;
+  cesiumViewer.imageryLayers.removeAll();
+  const p = await createBingAerialProvider(bingKey);
+  cesiumViewer.imageryLayers.addImageryProvider(p);
+}
+
+let lastMapLat = null, lastMapLon = null, lastMapAlt = null, lastMapYaw = null, lastMapSpd = null;
+let lastTargetVisState = false, lastTgtLat = null, lastTgtLon = null, lastTgtAlt = null;
+
+function setTargetMapVisibility(visible) {
+  if (lastTargetVisState === visible) return;
+  lastTargetVisState = visible;
+  if (targetEntity) targetEntity.show = visible;
+  if (targetLabelEntity) targetLabelEntity.show = visible;
+  if (targetDropLineEntity) targetDropLineEntity.show = visible;
+  if (engagementLinkEntity) engagementLinkEntity.show = visible;
+}
+
+function updateCesiumDroneFromTelemetry(lat, lon, alt, yaw, pitch, speed, homeLat, homeLon, isEngaged, lockedTarget) {
+  if (!cesiumViewer || !droneEntity) return;
+  if (homeEntity && homeLat && homeLon) homeEntity.position = Cesium.Cartesian3.fromDegrees(homeLon, homeLat, 0);
+  const dronePos = Cesium.Cartesian3.fromDegrees(lon, lat, alt);
+  const groundPos = Cesium.Cartesian3.fromDegrees(lon, lat, 0.0);
+  const midPos = Cesium.Cartesian3.fromDegrees(lon, lat, alt / 2.0);
+  const droneChanged = (lat !== lastMapLat || lon !== lastMapLon || alt !== lastMapAlt || yaw !== lastMapYaw || speed !== lastMapSpd);
+  if (droneChanged) {
+    lastMapLat = lat; lastMapLon = lon; lastMapAlt = alt; lastMapYaw = yaw; lastMapSpd = speed;
+    droneEntity.position = dronePos;
+    droneEntity.billboard.rotation = -Cesium.Math.toRadians(yaw);
+    if (headingLineEntity) { const ll = Math.max(85.0, speed * 4.5); const dest = computeDestinationPoint(lat, lon, yaw, ll); headingLineEntity.polyline.positions = [dronePos, Cesium.Cartesian3.fromDegrees(dest.lon, dest.lat, alt)]; }
+    if (altitudeDropLineEntity) altitudeDropLineEntity.polyline.positions = [dronePos, groundPos];
+    if (altitudeLabelEntity) { altitudeLabelEntity.position = midPos; altitudeLabelEntity.label.text = `ALT: ${alt.toFixed(1)} m`; }
+  }
+  if (!isEngaged) { setTargetMapVisibility(false); lastTgtLat = null; lastTgtLon = null; return; }
+  if (lockedTarget) {
+    const hfov = hudState.cameraHfovDeg || 80.0, vfov = hudState.cameraVfovDeg || 60.0;
+    const tiltDeg = hudState.cameraTiltDeg || 30.0, errX = Number(lockedTarget.err_x || 0), errY = Number(lockedTarget.err_y || 0);
+    const estDist = Number(lockedTarget.est_dist_m || 140.0);
+    const bearingDeg = (yaw + errX * (hfov / 2.0) + 360.0) % 360.0;
+    const elevDeg = pitch + tiltDeg - (errY * (vfov / 2.0));
+    const elevRad = (elevDeg * Math.PI) / 180.0;
+    const horizDist = Math.max(15.0, estDist * Math.cos(elevRad));
+    const estAlt = Math.max(2.0, alt + estDist * Math.sin(elevRad));
+    const tgtCoord = computeDestinationPoint(lat, lon, bearingDeg, horizDist);
+    hudState.estTargetLat = tgtCoord.lat; hudState.estTargetLon = tgtCoord.lon; hudState.estTargetAlt = estAlt;
+    hudState.estTargetLabel = `TD-${String(lockedTarget.id).padStart(2,"0")} [${lockedTarget.cls_label || "TGT"}] ~${Math.round(estDist)}m`;
+  } else if (hudState.estTargetLat === null) {
+    const dest = computeDestinationPoint(lat, lon, yaw, 140.0);
+    hudState.estTargetLat = dest.lat; hudState.estTargetLon = dest.lon; hudState.estTargetAlt = Math.max(5.0, alt); hudState.estTargetLabel = "ESTIMATED TGT";
+  }
+  setTargetMapVisibility(true);
+  if (hudState.estTargetLat !== lastTgtLat || hudState.estTargetLon !== lastTgtLon || hudState.estTargetAlt !== lastTgtAlt || droneChanged) {
+    lastTgtLat = hudState.estTargetLat; lastTgtLon = hudState.estTargetLon; lastTgtAlt = hudState.estTargetAlt;
+    const tgtPos = Cesium.Cartesian3.fromDegrees(hudState.estTargetLon, hudState.estTargetLat, hudState.estTargetAlt);
+    const tgtGroundPos = Cesium.Cartesian3.fromDegrees(hudState.estTargetLon, hudState.estTargetLat, 0.0);
+    if (targetEntity) targetEntity.position = tgtPos;
+    if (targetLabelEntity) { targetLabelEntity.position = tgtPos; targetLabelEntity.label.text = hudState.estTargetLabel; }
+    if (targetDropLineEntity) targetDropLineEntity.polyline.positions = [tgtPos, tgtGroundPos];
+    if (engagementLinkEntity) engagementLinkEntity.polyline.positions = [dronePos, tgtPos];
+  }
+}
+
+function updateTakeoffLandButtons() {
+  const btn1 = document.getElementById("btn-bottom-takeoff-land");
+  const btn2 = document.getElementById("btn-bottom-takeoff-land2");
+  const label = hudState.inAir ? "INIS" : "KALKIS";
+  const bc = hudState.inAir ? "var(--amber)" : "var(--cyan)";
+  [btn1, btn2].forEach(b => { if (b) { b.innerText = label; b.style.borderColor = bc; b.style.color = bc; } });
+}
+
+/* ═══════════════════════════════════════
+   WEBSOCKET HANDLER
+═══════════════════════════════════════ */
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  const t = data.telemetry;
+
+  hudState.targetPitch = t.pitch || 0;
+  hudState.targetRoll = t.roll || 0;
+  hudState.targetYaw = (t.yaw || 0) % 360;
+  hudState.targetAlt = t.alt !== undefined ? t.alt : 0;
+  hudState.targetSpeed = t.groundspeed || 0;
+  hudState.airspeed = t.airspeed || 0;
+  hudState.climb = t.climb || 0;
+  hudState.throttle = t.throttle || 0;
+  hudState.battery_v = t.battery_v || 0;
+  hudState.satellites = t.satellites || 0;
+  hudState.armed = Boolean(t.armed);
+  hudState.inAir = t.in_air !== undefined ? Boolean(t.in_air) : (hudState.targetAlt > 1.0);
+  hudState.mode = t.mode || "STBY";
+  hudState.engaged = Boolean(t.engaged || data.locked_target_id !== null);
+  hudState.lockedTargetId = data.locked_target_id;
+  hudState.aiStatus = data.model_status || "INIT";
+  hudState.activeCam = data.active_camera || "WIDE";
+
+  if (t.lat && t.lon) { hudState.lat = t.lat; hudState.lon = t.lon; }
+  if (t.home_lat && t.home_lon) { hudState.homeLat = t.home_lat; hudState.homeLon = t.home_lon; }
+
+  /* TOP BAR updates */
+  const tbAlt = document.getElementById("tb-alt"); if (tbAlt) tbAlt.textContent = hudState.targetAlt.toFixed(1) + " m";
+  const tbSpd = document.getElementById("tb-spd"); if (tbSpd) tbSpd.textContent = hudState.targetSpeed.toFixed(1) + " m/s";
+  const tbBat = document.getElementById("tb-bat"); if (tbBat) { tbBat.textContent = hudState.battery_v.toFixed(1) + " V"; tbBat.className = "tb-cell-val" + (hudState.battery_v < 14.0 && hudState.battery_v > 0 ? " warn" : ""); }
+  const tbSat = document.getElementById("tb-sat"); if (tbSat) { tbSat.textContent = hudState.satellites; tbSat.className = "tb-cell-val" + (hudState.satellites < 6 ? " warn" : " ok"); }
+  const tbArm = document.getElementById("tb-arm"); if (tbArm) { tbArm.textContent = hudState.armed ? "ARMED" : "DISARM"; tbArm.className = "tb-cell-val" + (hudState.armed ? " ok" : " warn"); }
+  const tbAi = document.getElementById("tb-ai"); if (tbAi) { tbAi.textContent = hudState.aiStatus; tbAi.className = "tb-cell-val" + (hudState.aiStatus === "ACTIVE" ? " ok" : ""); }
+
+  /* connection panel */
+  const cpClimb = document.getElementById("cp-climb"); if (cpClimb) cpClimb.textContent = (hudState.climb >= 0 ? "+" : "") + hudState.climb.toFixed(1) + " m/s";
+  const cpThr = document.getElementById("cp-thr"); if (cpThr) cpThr.textContent = hudState.throttle + "%";
+  const cpPr = document.getElementById("cp-pr"); if (cpPr) cpPr.textContent = hudState.targetPitch.toFixed(0) + "° / " + hudState.targetRoll.toFixed(0) + "°";
+
+  const lockedObj = (data.targets || []).find(item => item.locked) || null;
+  const engagedNow = Boolean(t.engaged || data.locked_target_id !== null);
+
+  updateCesiumDroneFromTelemetry(hudState.lat, hudState.lon, hudState.targetAlt, hudState.targetYaw, hudState.targetPitch, hudState.targetSpeed, hudState.homeLat, hudState.homeLon, engagedNow, lockedObj);
+  updateTakeoffLandButtons();
+
+  /* no-signal banner */
+  if (!data.active_cam_online) {
+    noSigBanner.classList.add("show");
+    document.getElementById("ns-cam").innerText = `${data.active_camera} (${data.active_cam_status})`;
+  } else {
+    noSigBanner.classList.remove("show");
   }
 
-  function closeSettings() {
-    document.getElementById("settings-modal").style.display = "none";
+  /* mav-indicator */
+  const mavInd = document.getElementById("mav-indicator");
+  if (mavInd) {
+    mavInd.innerText = t.status_msg || (t.connected ? "BAĞLI" : "BEKLENIYOR");
+    mavInd.className = "tb-cell-val" + (t.connected ? " ok" : " warn");
   }
 
-  async function saveAndTest() {
-    const btn = document.getElementById("btn-save-test");
-    const report = document.getElementById("test-report");
-    btn.innerText = "TEST EDİLİYOR...";
-    btn.disabled = true;
+  /* connection panel badge */
+  const mavConn = document.getElementById("mav-conn-val");
+  if (mavConn) { mavConn.textContent = t.connected ? "BAĞLI" : "BEKLENIYOR"; mavConn.className = "cp-val" + (t.connected ? " ok" : " warn"); }
 
-    const protoVal = document.getElementById("cfg-tel-proto").value;
-    let hostVal = document.getElementById("cfg-tel-host").value.trim();
-    if (protoVal === "SITL" || hostVal === "DAHİLİ SITL" || !hostVal) {
-      hostVal = "127.0.0.1";
+  /* camera indicator */
+  const zoomTag = (data.cpdd && data.cpdd.zoom > 1.0) ? ` ${data.cpdd.zoom}X` : "";
+  const camModeText = data.auto_camera ? `AUTO [${data.active_camera}${zoomTag}]` : `${data.active_camera}${zoomTag}`;
+  const camInd = document.getElementById("cam-indicator"); if (camInd) camInd.innerText = camModeText;
+  const camConn = document.getElementById("cam-conn-val"); if (camConn) camConn.textContent = data.active_cam_online ? "ONLINE" : "OFFLINE";
+
+  /* fps */
+  if (data.perf) {
+    const fpsEl = document.getElementById("fps-indicator");
+    if (fpsEl) {
+      fpsEl.innerText = `${camModeText} | ${data.perf.out_fps}fps`;
+      fpsEl.style.color = data.perf.out_fps < 10 ? "var(--red)" : (data.perf.out_fps < 18 ? "var(--amber)" : "var(--cyan)");
     }
+    const sumEl = document.getElementById("log-perf-summary");
+    if (sumEl) sumEl.innerText = `${data.perf.device} | ${data.perf.decoder} | ${data.perf.res} | AI:${data.perf.infer_ms}ms`;
+    const sumFp = document.getElementById("log-perf-summary-fp");
+    if (sumFp) sumFp.innerText = `${data.perf.device} | ${data.perf.decoder} | ${data.perf.res} | AI:${data.perf.infer_ms}ms`;
+  }
 
-    const tType = document.getElementById("cfg-test-type").value;
-    let testSourceUrl = "";
-    if (tType === "DATASET") {
-      testSourceUrl = "dataset:" + document.getElementById("cfg-dataset-folder").value;
-    } else {
-      testSourceUrl = document.getElementById("cfg-cam-webcam").value.trim();
+  /* logs */
+  if (data.logs && logsVisible) {
+    const logBox = document.getElementById("live-log-lines");
+    if (logBox) {
+      logBox.innerHTML = data.logs.map(line => `<div>${line}</div>`).join("");
+      const drawer = document.getElementById("live-log-drawer");
+      if (drawer) drawer.scrollTop = drawer.scrollHeight;
     }
+  }
 
-    const newBingKey = document.getElementById("cfg-bing-key").value.trim();
-    const newCamTilt = parseFloat(document.getElementById("cfg-cam-tilt").value);
-    const newCamVfov = parseFloat(document.getElementById("cfg-cam-vfov").value);
-    const cpddIp = document.getElementById("cfg-cpdd-ip").value.trim() || "192.168.144.108";
-    const cpddUdpPort = parseInt(document.getElementById("cfg-cpdd-udp-port").value) || 9554;
-    const cpddLocalPort = parseInt(document.getElementById("cfg-cpdd-local-port").value) || 7002;
-    const cpddRtspUrl = document.getElementById("cfg-cpdd-rtsp").value.trim() || `rtsp://${cpddIp}/live/0`;
+  if (data.ai_modules) { updateAiResultsPanel(data.ai_modules); }
 
-    hudState.cameraTiltDeg = isNaN(newCamTilt) ? 30.0 : newCamTilt;
-    hudState.cameraVfovDeg = isNaN(newCamVfov) ? 60.0 : newCamVfov;
-    await applyBingLayer(newBingKey);
+  /* mode display */
+  const bottomModeEl = document.getElementById("bottom-mode-display");
+  if (hudState.engaged) {
+    const engText = `INTERCEPT // TD-${String(data.locked_target_id).padStart(2,"0")}`;
+    if (bottomModeEl) { bottomModeEl.innerText = engText; bottomModeEl.classList.add("engaged"); }
+    if (abortBtn) abortBtn.style.display = "inline-flex";
+  } else {
+    if (bottomModeEl) { bottomModeEl.innerText = `${t.mode || "STBY"}`; bottomModeEl.classList.remove("engaged"); }
+    if (abortBtn) abortBtn.style.display = "none";
+  }
 
-    const payload = {
-      telemetry_protocol: protoVal,
-      telemetry_host: hostVal,
-      telemetry_port: parseInt(document.getElementById("cfg-tel-port").value) || 14550,
-      bing_maps_key: newBingKey,
-      camera_tilt_deg: hudState.cameraTiltDeg,
-      camera_vfov_deg: hudState.cameraVfovDeg,
-      cpdd_ip: cpddIp,
-      cpdd_udp_port: cpddUdpPort,
-      cpdd_local_port: cpddLocalPort,
-      cpdd_rtsp_url: cpddRtspUrl,
+  const modeSelectEl = document.getElementById("flight-mode-select");
+  if (modeSelectEl && document.activeElement !== modeSelectEl) {
+    const activeMode = hudState.engaged ? "INTERCEPT" : (t.mode || "STBY");
+    if ([...modeSelectEl.options].some(o => o.value === activeMode)) modeSelectEl.value = activeMode;
+  }
 
-      video_base_dir: document.getElementById("cfg-video-base").value.trim() || "video",
-      cameras: {
-        WIDE: { name: "EO-WIDE (GENIS)", url: cpddRtspUrl },
-        NARROW: { name: "EO-NARROW (DAR/ZOOM)", url: cpddRtspUrl },
-        THERMAL: { name: "IR-THERMAL (TERMAL)", url: cpddRtspUrl },
-        WEBCAM: { name: "DATASET / WEBCAM (TEST)", url: testSourceUrl }
-      },
-      yolo_model: document.getElementById("cfg-model").value.trim(),
-      confidence_threshold: parseFloat(document.getElementById("cfg-conf").value) || 0.45,
-      target_classes: document.getElementById("cfg-classes").value.trim(),
-      intercept_thrust_max: parseFloat(document.getElementById("cfg-thrust").value) || 1.0,
-      yaw_rate_gain: parseFloat(document.getElementById("cfg-yaw-gain").value) || 1.8,
-      pitch_rate_gain: parseFloat(document.getElementById("cfg-pitch-gain").value) || 1.5
-    };
+  renderTargetPods(data.targets);
+};
 
+/* ═══════════════════════════════════════
+   FLIGHT COMMANDS
+═══════════════════════════════════════ */
+function toggleTakeoffLand() {
+  if (hudState.inAir) sendFlightCmd("LAND");
+  else {
+    document.getElementById("takeoff-alt-input").value = 50;
+    const m = document.getElementById("takeoff-modal");
+    m.classList.add("open");
+  }
+}
+function setTakeoffPreset(meters) { document.getElementById("takeoff-alt-input").value = meters; }
+function closeTakeoffModal() { document.getElementById("takeoff-modal").classList.remove("open"); }
+async function confirmTakeoff() { const altVal = parseFloat(document.getElementById("takeoff-alt-input").value) || 50.0; closeTakeoffModal(); await sendFlightCmd("TAKEOFF", altVal); }
+
+async function onFlightModeSelect(newMode) {
+  if (!newMode) return;
+  hudState.engaged = false; hudState.lockedTargetId = null;
+  if (abortBtn) abortBtn.style.display = "none";
+  setTargetMapVisibility(false);
+  await fetch("/api/set_mode", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({mode: newMode}) });
+}
+
+async function sendFlightCmd(cmd, alt = 50.0) {
+  if (cmd !== "INTERCEPT") { hudState.engaged = false; hudState.lockedTargetId = null; if (abortBtn) abortBtn.style.display = "none"; setTargetMapVisibility(false); }
+  await fetch("/api/flight_cmd", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({cmd, alt}) });
+}
+
+/* ═══════════════════════════════════════
+   HUD CANVAS
+═══════════════════════════════════════ */
+const canvas = document.getElementById("hud-canvas");
+const ctx = canvas.getContext("2d");
+
+function resizeHudCanvas() {
+  const stage = document.getElementById("camera-stage");
+  canvas.width = stage.clientWidth || window.innerWidth;
+  canvas.height = stage.clientHeight || window.innerHeight;
+}
+window.addEventListener("resize", () => { resizeHudCanvas(); if (cesiumViewer) { cesiumViewer.resize(); cesiumViewer.scene.requestRender(); } });
+resizeHudCanvas();
+
+function lerpAngle(a, b, t) { let diff = ((b - a + 540) % 360) - 180; return (a + diff * t + 360) % 360; }
+
+function renderFighterJetHUD() {
+  hudState.pitch += (hudState.targetPitch - hudState.pitch) * 0.25;
+  hudState.roll += (hudState.targetRoll - hudState.roll) * 0.25;
+  hudState.yaw = lerpAngle(hudState.yaw, hudState.targetYaw, 0.25);
+  hudState.alt += (hudState.targetAlt - hudState.alt) * 0.25;
+  hudState.speed += (hudState.targetSpeed - hudState.speed) * 0.25;
+
+  const W = canvas.width, H = canvas.height, cx = W / 2, cy = H / 2;
+  const hudColor = "#39ff5a";
+  ctx.clearRect(0, 0, W, H);
+  const isMini = W < 420;
+
+  ctx.save();
+  ctx.globalAlpha = 0.42;
+  ctx.strokeStyle = hudColor; ctx.fillStyle = hudColor;
+  ctx.shadowColor = "rgba(57,255,90,0.25)"; ctx.shadowBlur = 2;
+  ctx.lineWidth = 1.1;
+  ctx.font = "bold 11px Consolas, monospace";
+
+  const vfov = Math.max(20.0, hudState.cameraVfovDeg || 60.0);
+  const pxPerDeg = H / vfov;
+  const ladderWidth = isMini ? W * 0.34 : Math.min(180, W * 0.21);
+  const gapHalf = isMini ? 18 : 34;
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(cx - ladderWidth - 40, isMini ? 24 : 78, (ladderWidth + 40) * 2, H - (isMini ? 36 : 145)); ctx.clip();
+  ctx.translate(cx, cy); ctx.rotate((-hudState.roll * Math.PI) / 180);
+  const netHorizonOffsetDeg = hudState.pitch + (hudState.cameraTiltDeg || 0.0);
+  ctx.translate(0, netHorizonOffsetDeg * pxPerDeg);
+  const hLen = ladderWidth * 1.2;
+  ctx.lineWidth = 1.3;
+  ctx.beginPath(); ctx.moveTo(-hLen, 0); ctx.lineTo(-gapHalf, 0); ctx.moveTo(gapHalf, 0); ctx.lineTo(hLen, 0); ctx.stroke();
+  ctx.restore();
+
+  ctx.lineWidth = 1.4;
+  const wScale = isMini ? 0.55 : 0.85;
+  ctx.beginPath();
+  ctx.moveTo(cx - 30*wScale, cy); ctx.lineTo(cx - 12*wScale, cy); ctx.lineTo(cx - 6*wScale, cy + 6*wScale);
+  ctx.lineTo(cx, cy); ctx.lineTo(cx + 6*wScale, cy + 6*wScale); ctx.lineTo(cx + 12*wScale, cy); ctx.lineTo(cx + 30*wScale, cy);
+  ctx.stroke();
+
+  if (!isMini) {
+    const bankRadius = Math.min(155, H * 0.27);
+    const bankAngles = [-60,-45,-30,-15,0,15,30,45,60];
+    ctx.lineWidth = 1.1;
+    bankAngles.forEach(ang => {
+      const rad = ((ang - 90) * Math.PI) / 180;
+      const tickLen = (ang % 30 === 0) ? 9 : 5;
+      const x1 = cx + Math.cos(rad)*bankRadius, y1 = cy + Math.sin(rad)*bankRadius;
+      const x2 = cx + Math.cos(rad)*(bankRadius+tickLen), y2 = cy + Math.sin(rad)*(bankRadius+tickLen);
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    });
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate((-hudState.roll*Math.PI)/180);
+    ctx.beginPath(); ctx.moveTo(0,-bankRadius+2); ctx.lineTo(-5,-bankRadius+10); ctx.lineTo(5,-bankRadius+10); ctx.closePath(); ctx.fill();
+    ctx.restore();
+
+    const tapeW = 54, tapeH = Math.min(220, H*0.42);
+    const spdX = Math.max(14, cx - ladderWidth - 95);
+    const tapeTop = cy - tapeH/2;
+    ctx.lineWidth = 1.1;
+    ctx.beginPath(); ctx.moveTo(spdX+tapeW, tapeTop); ctx.lineTo(spdX+tapeW, tapeTop+tapeH); ctx.stroke();
+    ctx.save(); ctx.beginPath(); ctx.rect(spdX-6, tapeTop, tapeW+10, tapeH); ctx.clip();
+    const spdPxPerUnit = 5.2;
+    const minSpd = Math.floor(hudState.speed-25), maxSpd = Math.ceil(hudState.speed+25);
+    ctx.font = "10px Consolas"; ctx.textAlign = "right";
+    for (let s=minSpd; s<=maxSpd; s++) {
+      if (s<0) continue;
+      const y = cy - (s - hudState.speed)*spdPxPerUnit;
+      if (s%5===0) { ctx.beginPath(); ctx.moveTo(spdX+tapeW-8,y); ctx.lineTo(spdX+tapeW,y); ctx.stroke(); ctx.fillText(s.toString(),spdX+tapeW-11,y+3); }
+      else { ctx.beginPath(); ctx.moveTo(spdX+tapeW-4,y); ctx.lineTo(spdX+tapeW,y); ctx.stroke(); }
+    }
+    ctx.restore();
+    ctx.fillStyle = "rgba(3,10,5,0.65)"; ctx.fillRect(spdX-2,cy-11,tapeW,22); ctx.strokeRect(spdX-2,cy-11,tapeW,22);
+    ctx.fillStyle = hudColor; ctx.font = "bold 12px Consolas"; ctx.textAlign = "right";
+    ctx.fillText(hudState.speed.toFixed(1), spdX+tapeW-5, cy+4);
+    ctx.font = "bold 9px Consolas"; ctx.textAlign = "left";
+    ctx.fillText("SPD m/s", spdX, tapeTop-6);
+    ctx.fillText(`THR ${hudState.throttle}%`, spdX, tapeTop+tapeH+13);
+    ctx.fillText(`BAT ${hudState.battery_v.toFixed(1)}V`, spdX, tapeTop+tapeH+25);
+    ctx.fillText(`${hudState.armed?"ARMED":"DISARM"}`, spdX, tapeTop+tapeH+37);
+
+    const altX = Math.min(W-tapeW-14, cx+ladderWidth+41);
+    ctx.beginPath(); ctx.moveTo(altX,tapeTop); ctx.lineTo(altX,tapeTop+tapeH); ctx.stroke();
+    ctx.save(); ctx.beginPath(); ctx.rect(altX-4,tapeTop,tapeW+18,tapeH); ctx.clip();
+    const altPxPerUnit = 3.8;
+    const minAlt = Math.floor(hudState.alt-35), maxAlt = Math.ceil(hudState.alt+35);
+    ctx.font = "10px Consolas"; ctx.textAlign = "left";
+    for (let a=minAlt; a<=maxAlt; a++) {
+      const y = cy - (a-hudState.alt)*altPxPerUnit;
+      if (a%10===0) { ctx.beginPath(); ctx.moveTo(altX,y); ctx.lineTo(altX+8,y); ctx.stroke(); ctx.fillText(a.toString(),altX+11,y+3); }
+      else if (a%2===0) { ctx.beginPath(); ctx.moveTo(altX,y); ctx.lineTo(altX+4,y); ctx.stroke(); }
+    }
+    ctx.restore();
+    ctx.fillStyle = "rgba(3,10,5,0.65)"; ctx.fillRect(altX+2,cy-11,tapeW+4,22); ctx.strokeRect(altX+2,cy-11,tapeW+4,22);
+    ctx.fillStyle = hudColor; ctx.font = "bold 12px Consolas"; ctx.textAlign = "left";
+    ctx.fillText(hudState.alt.toFixed(1), altX+6, cy+4);
+    ctx.font = "bold 9px Consolas";
+    ctx.fillText("ALT m", altX, tapeTop-6);
+    ctx.fillText(`VSI ${hudState.climb>=0?"+":""}${hudState.climb.toFixed(1)}`, altX, tapeTop+tapeH+13);
+    ctx.fillText(`P:${hudState.pitch.toFixed(0)}° R:${hudState.roll.toFixed(0)}°`, altX, tapeTop+tapeH+25);
+
+    const hdgW = Math.min(280, W*0.34), hdgY = 48, hdgLeft = cx-hdgW/2;
+    ctx.save(); ctx.beginPath(); ctx.rect(hdgLeft,hdgY-10,hdgW,32); ctx.clip();
+    const pxPerDegHdg = 3.8;
+    const startDeg = Math.floor(hudState.yaw-40), endDeg = Math.ceil(hudState.yaw+40);
+    ctx.font = "bold 10px Consolas"; ctx.textAlign = "center";
+    const cardinals = {0:"N",45:"NE",90:"E",135:"SE",180:"S",225:"SW",270:"W",315:"NW"};
+    for (let d=startDeg; d<=endDeg; d++) {
+      const normDeg = ((d%360)+360)%360;
+      const x = cx + (d-hudState.yaw)*pxPerDegHdg;
+      if (normDeg%10===0) { ctx.beginPath(); ctx.moveTo(x,hdgY+12); ctx.lineTo(x,hdgY+19); ctx.stroke(); const label = cardinals[normDeg] || String(normDeg).padStart(3,"0"); ctx.fillText(label,x,hdgY+9); }
+      else if (normDeg%5===0) { ctx.beginPath(); ctx.moveTo(x,hdgY+15); ctx.lineTo(x,hdgY+19); ctx.stroke(); }
+    }
+    ctx.restore();
+    const hdgInt = Math.round(hudState.yaw)%360;
+    ctx.fillStyle = "rgba(3,10,5,0.65)"; ctx.fillRect(cx-21,hdgY-3,42,18); ctx.strokeRect(cx-21,hdgY-3,42,18);
+    ctx.fillStyle = hudColor; ctx.font = "bold 11px Consolas"; ctx.textAlign = "center";
+    ctx.fillText(String(hdgInt).padStart(3,"0")+"°", cx, hdgY+10);
+  }
+
+  ctx.restore();
+  requestAnimationFrame(renderFighterJetHUD);
+}
+requestAnimationFrame(renderFighterJetHUD);
+
+/* ═══════════════════════════════════════
+   TARGET PODS
+═══════════════════════════════════════ */
+function renderTargetPods(targets) {
+  if (!targets || targets.length === 0) {
+    if (targetsDock.innerHTML !== "") { targetsDock.innerHTML = ""; lastTargetsSignature = ""; }
+    return;
+  }
+  const sig = `${targets.length}#` + targets.map(t => `${t.id}:${t.locked}`).join("|");
+  if (sig !== lastTargetsSignature) {
+    lastTargetsSignature = sig;
+    targetsDock.innerHTML = "";
+    targets.forEach(tgt => {
+      const pod = document.createElement("div");
+      pod.className = "target-pod" + (tgt.locked ? " locked" : "");
+      pod.dataset.targetId = tgt.id;
+      const idStr = String(tgt.id).padStart(2,"0");
+      pod.innerHTML = `<img id="pod-img-${tgt.id}" src="data:image/jpeg;base64,${tgt.thumbnail}" alt="TD-${idStr}">
+        <div class="pod-meta"><span>TD-${idStr} <span style="color:var(--cyan);font-size:9px;">[${tgt.cls_label||"TGT"}]</span></span><span id="pod-conf-${tgt.id}">~${Math.round(tgt.est_dist_m||0)}m</span></div>
+        <div class="pod-action">${tgt.locked?(targets.length===1?"KILITLI [IPTAL]":"KILITLI"):"ANGAJMAN"}</div>`;
+      targetsDock.appendChild(pod);
+    });
+  } else {
+    targets.forEach(tgt => {
+      const imgEl = document.getElementById(`pod-img-${tgt.id}`);
+      if (imgEl && tgt.thumbnail) imgEl.src = `data:image/jpeg;base64,${tgt.thumbnail}`;
+      const confEl = document.getElementById(`pod-conf-${tgt.id}`);
+      if (confEl) confEl.innerText = `~${Math.round(tgt.est_dist_m||0)}m`;
+    });
+  }
+}
+
+targetsDock.addEventListener("pointerdown", (e) => {
+  const pod = e.target.closest(".target-pod");
+  if (!pod) return;
+  e.preventDefault(); e.stopPropagation();
+  const targetId = parseInt(pod.dataset.targetId, 10);
+  if (isNaN(targetId)) return;
+  const totalPods = targetsDock.querySelectorAll(".target-pod").length;
+  const isPodLocked = pod.classList.contains("locked") || (hudState.engaged && hudState.lockedTargetId === targetId);
+  if (totalPods === 1 && isPodLocked) { abortEngagement(); return; }
+  lockTarget(targetId);
+});
+
+async function lockTarget(targetId) {
+  hudState.engaged = true; hudState.lockedTargetId = targetId;
+  if (abortBtn) abortBtn.style.display = "inline-flex";
+  await fetch("/api/lock", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({target_id:targetId}) });
+}
+
+async function abortEngagement() {
+  hudState.engaged = false; hudState.lockedTargetId = null;
+  if (abortBtn) abortBtn.style.display = "none";
+  setTargetMapVisibility(false);
+  await fetch("/api/abort", {method:"POST"});
+}
+
+/* ═══════════════════════════════════════
+   CPDD COMMANDS
+═══════════════════════════════════════ */
+async function sendCpddRawText() {
+  const cmd = document.getElementById("cfg-cpdd-text-cmd").value.trim();
+  const out = document.getElementById("cpdd-raw-reply");
+  if (!cmd) return;
+  out.innerText = "Gonderiliyor...";
+  const res = await fetch("/api/cpdd/raw", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({mode:"TEXT", text_cmd:cmd}) });
+  const d = await res.json();
+  out.style.color = "var(--accent)"; out.innerText = "Yanit: " + (d.reply || "OK");
+}
+
+async function sendCpddRawHex() {
+  const tb = document.getElementById("cfg-cpdd-hex-b").value.trim();
+  const tcd = document.getElementById("cfg-cpdd-hex-cd").value.trim();
+  const out = document.getElementById("cpdd-raw-reply");
+  const res = await fetch("/api/cpdd/raw", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({mode:"HEX", type_b:tb, type_cd:tcd}) });
+  const d = await res.json();
+  out.style.color = "var(--cyan)"; out.innerText = d.reply || "HEX gonderildi";
+}
+
+async function sendCpddCmd(action) {
+  await fetch("/api/cpdd/cmd", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({action}) });
+}
+
+function onCpddIpInput() {
+  const ipVal = document.getElementById("cfg-cpdd-ip").value.trim();
+  const rtspInput = document.getElementById("cfg-cpdd-rtsp");
+  if (ipVal && rtspInput) rtspInput.value = `rtsp://${ipVal}/live/0`;
+}
+
+/* ═══════════════════════════════════════
+   CAMERA SELECTION
+═══════════════════════════════════════ */
+async function setCamera(mode) {
+  document.querySelectorAll("#bottom-bar .tac-btn.webcam-btn, #bottom-bar .tac-btn").forEach(b => { if (b.id && b.id.startsWith("btn-")) b.classList.remove("active"); });
+  const activeBtn = document.getElementById(`btn-${mode}`);
+  if (activeBtn) activeBtn.classList.add("active");
+  await fetch("/api/camera", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({mode}) });
+}
+
+/* ═══════════════════════════════════════
+   TEST SOURCE
+═══════════════════════════════════════ */
+function onTestTypeChange() {
+  const tType = document.getElementById("cfg-test-type").value;
+  const boxCustom = document.getElementById("box-custom-source");
+  const btnScan = document.getElementById("btn-scan-cam");
+  const lblCustom = document.getElementById("lbl-custom-source");
+  const inpCustom = document.getElementById("cfg-cam-webcam");
+  boxCustom.style.display = "flex";
+  if (tType === "WEBCAM") {
+    if (btnScan) btnScan.style.display = "inline-flex";
+    if (lblCustom) lblCustom.innerText = "Kamera Indeksi";
+    if (inpCustom && !/^\d+$/.test(inpCustom.value.trim())) inpCustom.value = "0";
+  } else {
+    if (btnScan) btnScan.style.display = "none";
+    if (lblCustom) lblCustom.innerText = "Video / RTSP URL";
+    if (inpCustom && /^\d+$/.test(inpCustom.value.trim())) inpCustom.value = "";
+  }
+}
+
+async function scanWebcams() {
+  try { const res = await fetch("/api/scan_webcams"); const data = await res.json(); if (data.webcams && data.webcams.length > 0) document.getElementById("cfg-cam-webcam").value = data.webcams[0]; } catch(e) {}
+}
+
+function onProtocolChange() {
+  const proto = document.getElementById("cfg-tel-proto").value;
+  const hostInput = document.getElementById("cfg-tel-host");
+  const portInput = document.getElementById("cfg-tel-port");
+  const lblHost = document.getElementById("lbl-tel-host");
+  if (proto === "SITL") { if(lblHost) lblHost.innerText = "Simulasyon"; if(hostInput) { hostInput.value = "DAHILI SITL"; hostInput.disabled = true; } if(portInput) portInput.disabled = true; }
+  else if (proto === "TCP") {
+    if(hostInput) { hostInput.disabled = false; if(hostInput.value === "0.0.0.0" || hostInput.value === "DAHILI SITL") hostInput.value = "127.0.0.1"; }
+    if(portInput) { portInput.disabled = false; if(portInput.value === "14550") portInput.value = "5760"; }
+    if(lblHost) lblHost.innerText = "Hedef IP";
+  } else if (proto === "TCPIN") {
+    if(hostInput) { hostInput.disabled = false; if(hostInput.value === "127.0.0.1" || hostInput.value === "DAHILI SITL") hostInput.value = "0.0.0.0"; }
+    if(portInput) portInput.disabled = false;
+    if(lblHost) lblHost.innerText = "Dinleme IP";
+  } else {
+    if(hostInput) { hostInput.disabled = false; if(hostInput.value === "127.0.0.1" || hostInput.value === "DAHILI SITL") hostInput.value = "0.0.0.0"; }
+    if(portInput) { portInput.disabled = false; if(portInput.value === "5760") portInput.value = "14550"; }
+    if(lblHost) lblHost.innerText = "Dinleme IP";
+  }
+}
+
+/* ═══════════════════════════════════════
+   SETTINGS SAVE
+═══════════════════════════════════════ */
+async function saveAndTest() {
+  const btn = document.getElementById("btn-save-test");
+  const report = document.getElementById("test-report");
+  btn.innerText = "TEST EDILIYOR..."; btn.disabled = true;
+  const protoVal = document.getElementById("cfg-tel-proto").value;
+  let hostVal = document.getElementById("cfg-tel-host").value.trim();
+  if (protoVal === "SITL" || hostVal === "DAHILI SITL" || !hostVal) hostVal = "127.0.0.1";
+  const tType = document.getElementById("cfg-test-type").value;
+  let testSourceUrl = document.getElementById("cfg-cam-webcam").value.trim();
+  const newBingKey = document.getElementById("cfg-bing-key").value.trim();
+  const newCamTilt = parseFloat(document.getElementById("cfg-cam-tilt").value);
+  const newCamVfov = parseFloat(document.getElementById("cfg-cam-vfov").value);
+  const cpddIp = document.getElementById("cfg-cpdd-ip").value.trim() || "192.168.144.108";
+  const cpddUdpPort = parseInt(document.getElementById("cfg-cpdd-udp-port").value) || 9554;
+  const cpddLocalPort = parseInt(document.getElementById("cfg-cpdd-local-port").value) || 7002;
+  const cpddRtspUrl = document.getElementById("cfg-cpdd-rtsp").value.trim() || `rtsp://${cpddIp}/live/0`;
+  hudState.cameraTiltDeg = isNaN(newCamTilt) ? 30.0 : newCamTilt;
+  hudState.cameraVfovDeg = isNaN(newCamVfov) ? 60.0 : newCamVfov;
+  await applyBingLayer(newBingKey);
+  const payload = {
+    telemetry_protocol: protoVal, telemetry_host: hostVal,
+    telemetry_port: parseInt(document.getElementById("cfg-tel-port").value) || 14550,
+    bing_maps_key: newBingKey, camera_tilt_deg: hudState.cameraTiltDeg, camera_vfov_deg: hudState.cameraVfovDeg,
+    cpdd_ip: cpddIp, cpdd_udp_port: cpddUdpPort, cpdd_local_port: cpddLocalPort, cpdd_rtsp_url: cpddRtspUrl,
+    cameras: { WIDE:{name:"EO-WIDE",url:cpddRtspUrl}, NARROW:{name:"EO-NARROW",url:cpddRtspUrl}, THERMAL:{name:"IR-THERMAL",url:cpddRtspUrl}, WEBCAM:{name:"TEST",url:testSourceUrl} },
+    intercept_thrust_max: parseFloat(document.getElementById("cfg-thrust").value) || 1.0,
+    yaw_rate_gain: parseFloat(document.getElementById("cfg-yaw-gain").value) || 1.8,
+    pitch_rate_gain: parseFloat(document.getElementById("cfg-pitch-gain").value) || 1.5
+  };
+  try {
+    const res = await fetch("/api/settings/save_and_test", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload) });
+    const data = await res.json();
+    const c = data.vision.cameras;
+    const mavBadge = data.mavlink.ok ? '<span style="color:var(--accent)">[BAGLI]</span>' : '<span style="color:var(--red)">[HATA]</span>';
+    const cpddBadge = data.vision.cpdd_udp?.ok ? '<span style="color:var(--accent)">[HAZIR]</span>' : '<span style="color:var(--amber)">[UYARI]</span>';
+    report.style.display = "block";
+    report.innerHTML = `<div><b>TELEMETRI:</b> ${mavBadge} ${data.mavlink.msg}</div><div><b>CPDD UDP:</b> ${cpddBadge} ${data.vision.cpdd_udp?.msg||""}</div><div><b>YAPAY ZEKA:</b> ${data.vision.model_ready?'<span style="color:var(--accent)">[HAZIR]</span>':'<span style="color:var(--red)">[HATA]</span>'} ${data.vision.model_status}</div><div><b>VIDEO:</b> TEKIL RTSP [${c.MAIN_RTSP.status}] | TEST [${c.WEBCAM.status}]</div>`;
+  } catch(err) {
+    report.style.display = "block";
+    report.innerHTML = `<span style="color:var(--red);">[ERR] ${err}</span>`;
+  } finally { btn.innerText = "KAYDET VE TEST ET"; btn.disabled = false; }
+}
+
+/* ═══════════════════════════════════════
+   AI MODULES
+═══════════════════════════════════════ */
+const AI_MODULE_META = {
+  pose:{icon:"🦴",name:"POSE - Poz Tahmini"},
+  person:{icon:"👤",name:"Insan Tanima"},
+  multi_person:{icon:"👥",name:"Coklu Insan Tanima"},
+  ocr:{icon:"📝",name:"OCR - Metin Tanima"},
+  plate:{icon:"🔢",name:"Plaka Tanima"},
+  vehicle:{icon:"🚗",name:"Arac Tanima"},
+  aircraft:{icon:"✈️",name:"Hava Araci Tanima"},
+  animal:{icon:"🐾",name:"Hayvan Tanima"},
+  object:{icon:"📦",name:"Nesne Tanima"}
+};
+let aiModulesCache = [], aiDownloadPollers = {}, aiModuleResults = {};
+
+async function loadAiModules() {
+  try { const res = await fetch("/api/ai_modules"); const data = await res.json(); aiModulesCache = data.modules || []; renderAiModules(); } catch(e) {}
+}
+
+function renderAiModules() {
+  const bg = document.getElementById("ai-builtin-grid"); const cg = document.getElementById("ai-custom-grid");
+  bg.innerHTML = ""; cg.innerHTML = "";
+  aiModulesCache.forEach(mod => { const card = createModuleCard(mod); if (mod.builtin) bg.appendChild(card); else cg.appendChild(card); });
+  if (cg.children.length === 0) cg.innerHTML = '<div style="font-size:10px;color:var(--text3);padding:8px;grid-column:1/-1;">Henuz ozel model eklenmedi</div>';
+}
+
+function getStatusInfo(mod) {
+  if (mod.enabled && mod.model_loaded) return {text:"AKTIF",cls:"st-active"};
+  if (mod.download_status === "error") return {text:"HATA",cls:"st-error"};
+  if (mod.download_status === "downloading") return {text:"INDIRILIYOR",cls:"st-downloading"};
+  if (mod.download_status === "needs_install") return {text:"KURULUM GEREKLI",cls:"st-needs-install"};
+  if (mod.download_status === "downloaded") return {text:"HAZIR",cls:"st-ready"};
+  return {text:"INDIRILMEDI",cls:"st-none"};
+}
+
+function createModuleCard(mod) {
+  const meta = AI_MODULE_META[mod.id] || {icon:"🔧",name:mod.name||mod.id};
+  const st = getStatusInfo(mod);
+  const isDl = mod.download_status === "downloaded" || mod.download_status === "needs_install";
+  const isDling = mod.download_status === "downloading";
+  const confPct = Math.round((mod.confidence||0.5)*100);
+  const r = aiModuleResults[mod.id]; const detCount = r ? r.count : 0;
+  const card = document.createElement("div");
+  let cls = "ai-module-card";
+  if (mod.enabled && mod.model_loaded) cls += " active";
+  else if (isDling) cls += " downloading";
+  else if (mod.download_status === "error") cls += " error";
+  card.className = cls;
+  card.innerHTML = `<div class="ai-card-header"><div class="ai-card-name"><span>${meta.icon}</span><span>${meta.name}</span></div>
+    <label class="ai-toggle"><input type="checkbox" ${mod.enabled?"checked":""} ${!isDl?"disabled":""} onchange="toggleAiModule('${mod.id}',this.checked)"><span class="ai-toggle-track"></span></label></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;"><span class="ai-status ${st.cls}" id="ai-status-${mod.id}">${st.text}</span><span class="ai-results-badge ${detCount>0?"has-results":""}" id="ai-det-${mod.id}">${detCount} tespit</span></div>
+    <div style="display:flex;align-items:center;gap:5px;">
+      ${!isDl&&!isDling?`<button class="ai-dl-btn" onclick="downloadAiModel('${mod.id}')">INDIR</button>`:""}
+      ${isDling?`<button class="ai-dl-btn" disabled>INDIRILIYOR...</button>`:""}
+      <div class="ai-progress-bar ${isDling?"visible":""}" id="ai-prog-bar-${mod.id}"><div class="ai-progress-fill" id="ai-prog-fill-${mod.id}" style="width:${mod.download_progress||0}%"></div><div class="ai-progress-text" id="ai-prog-text-${mod.id}">${mod.download_progress||0}%</div></div>
+      ${isDl&&mod.model_file!=='__easyocr__'?`<button class="ai-dl-btn del-btn" onclick="deleteAiModel('${mod.id}')">SIL</button>`:""}
+      ${!mod.builtin?`<button class="ai-dl-btn del-btn" onclick="removeCustomModule('${mod.id}')">KALDIR</button>`:""}
+    </div>
+    <div class="ai-slider-row"><span class="ai-slider-label" id="ai-conf-lbl-${mod.id}">Hassasiyet: ${confPct}%</span><input type="range" class="ai-slider" min="10" max="95" value="${confPct}" ${!isDl?"disabled":""} oninput="document.getElementById('ai-conf-lbl-${mod.id}').textContent='Hassasiyet: '+this.value+'%'" onchange="setAiModuleConfidence('${mod.id}',this.value)"></div>`;
+  return card;
+}
+
+async function toggleAiModule(mid, enabled) { try { await fetch(`/api/ai_modules/${mid}/toggle`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({enabled}) }); setTimeout(loadAiModules, 300); } catch(e) {} }
+async function setAiModuleConfidence(mid, pctVal) { try { await fetch(`/api/ai_modules/${mid}/config`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({confidence:parseInt(pctVal)/100.0}) }); } catch(e) {} }
+async function downloadAiModel(mid) { try { await fetch(`/api/ai_modules/${mid}/download`,{method:"POST"}); pollDownloadProgress(mid); loadAiModules(); } catch(e) {} }
+function pollDownloadProgress(mid) {
+  if (aiDownloadPollers[mid]) return;
+  aiDownloadPollers[mid] = setInterval(async () => {
     try {
-      const res = await fetch("/api/settings/save_and_test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
+      const res = await fetch(`/api/ai_modules/${mid}/download_status`); const d = await res.json();
+      const fill = document.getElementById(`ai-prog-fill-${mid}`); const text = document.getElementById(`ai-prog-text-${mid}`); const bar = document.getElementById(`ai-prog-bar-${mid}`);
+      if (fill) fill.style.width = `${d.progress_pct||0}%`; if (text) text.textContent = `${d.progress_pct||0}%`; if (bar) bar.classList.add("visible");
+      if (d.status === "downloaded" || d.status === "error") { clearInterval(aiDownloadPollers[mid]); delete aiDownloadPollers[mid]; loadAiModules(); }
+    } catch(e) { clearInterval(aiDownloadPollers[mid]); delete aiDownloadPollers[mid]; }
+  }, 1000);
+}
+async function deleteAiModel(mid) { if (!confirm("Silinecek. Emin misiniz?")) return; try { await fetch(`/api/ai_modules/${mid}/delete_model`,{method:"POST"}); loadAiModules(); } catch(e) {} }
+function toggleCustomModelForm() { document.getElementById("ai-custom-form").classList.toggle("visible"); }
+async function addCustomModule() {
+  const name = document.getElementById("ai-custom-name").value.trim();
+  const url = document.getElementById("ai-custom-url").value.trim();
+  const conf = parseFloat(document.getElementById("ai-custom-conf").value) || 0.5;
+  if (!name || !url) { alert("Model adi ve URL/dosya yolu gereklidir."); return; }
+  try { const res = await fetch("/api/ai_modules/custom",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,model_url:url,model_type:"yolov8_detect",default_confidence:conf})}); const d = await res.json(); if (d.ok) { document.getElementById("ai-custom-name").value=""; document.getElementById("ai-custom-url").value=""; toggleCustomModelForm(); loadAiModules(); } else alert("Hata: "+(d.error||"Bilinmeyen")); } catch(e) {}
+}
+async function removeCustomModule(mid) { if (!confirm("Bu ozel model kaldirilacak. Emin misiniz?")) return; try { await fetch(`/api/ai_modules/custom/${mid}`,{method:"DELETE"}); loadAiModules(); } catch(e) {} }
 
-      if (tType === "DATASET") {
-        await populateDatasetDropdown(document.getElementById("cfg-dataset-folder").value);
-      }
+function updateAiResultsPanel(aiData) {
+  if (!aiData) return;
+  const panel = document.getElementById("ai-results-panel"); if (!panel) return;
+  aiModuleResults = aiData.results || {};
+  const activeIds = aiData.active || [];
+  if (activeIds.length === 0) { panel.innerHTML = '<div style="font-size:10px;color:var(--text3);padding:8px;">Aktif modul yok</div>'; return; }
+  let html = "";
+  activeIds.forEach(mid => { const r = aiModuleResults[mid] || {}; const meta = AI_MODULE_META[mid] || {icon:"🔧",name:mid}; html += `<div class="ai-result-stat"><span class="stat-name">${meta.icon} ${meta.name}</span><span class="stat-vals">${r.count||0} tespit | ${r.fps||0} FPS | ${r.infer_ms||0}ms</span></div>`; });
+  panel.innerHTML = html;
+  for (const [mid, r] of Object.entries(aiModuleResults)) { const badge = document.getElementById(`ai-det-${mid}`); if (badge) { badge.textContent = `${r.count||0} tespit`; badge.className = "ai-results-badge" + ((r.count||0)>0?" has-results":""); } }
+}
 
-      const c = data.vision.cameras;
-      const mavBadge = data.mavlink.ok
-        ? '<span style="color:var(--hud-green)">[BAĞLI]</span>'
-        : '<span style="color:var(--hud-red)">[HATA]</span>';
+/* ═══════════════════════════════════════
+   KLASOR & PROFIL YONETIMI
+═══════════════════════════════════════ */
+let foldersCache = {};
+async function loadFolders() { try { const res = await fetch("/api/folders"); const data = await res.json(); foldersCache = data.folders || {}; renderFolders(); } catch(e) {} }
 
-      report.style.display = "block";
-      const cpddUdpBadge = data.vision.cpdd_udp?.ok
-        ? '<span style="color:var(--hud-green)">[HAZIR]</span>'
-        : '<span style="color:var(--hud-amber)">[UYARI]</span>';
-
-      report.innerHTML = `
-        <div><b>TELEMETRİ:</b> ${mavBadge} ${data.mavlink.msg}</div>
-        <div><b>CPDD075 SDK UDP:</b> ${cpddUdpBadge} ${data.vision.cpdd_udp?.msg || ""}</div>
-        <div><b>YAPAY ZEKA:</b> ${data.vision.model_ready ? '<span style="color:var(--hud-green)">[HAZIR]</span>' : '<span style="color:var(--hud-red)">[HATA]</span>'} ${data.vision.model_status}</div>
-        <div><b>VİDEO AKIŞLARI:</b> TEKİL RTSP [${c.MAIN_RTSP.status}] (${c.MAIN_RTSP.error || c.MAIN_RTSP.url}) | TEST [${c.WEBCAM.status}]</div>
-      `;
-    } catch (err) {
-      report.style.display = "block";
-      report.innerHTML = `<span style="color:var(--hud-red);">[ERR] ${err}</span>`;
-    } finally {
-      btn.innerText = "KAYDET VE TEST ET";
-      btn.disabled = false;
-    }
+function renderFolders() {
+  const grid = document.getElementById("folders-grid"); if (!grid) return;
+  if (Object.keys(foldersCache).length === 0) { grid.innerHTML = '<div style="font-size:10px;color:var(--text3);padding:8px;grid-column:1/-1;">Henuz klasor eklenmedi</div>'; return; }
+  let html = "";
+  for (const [fid, folder] of Object.entries(foldersCache)) {
+    const camTags = (folder.cameras||[]).map(c => `<span class="folder-cam-tag">${c} <button onclick="removeCamFromFolder('${fid}','${c}')" class="folder-cam-remove">×</button></span>`).join("");
+    html += `<div class="folder-card"><div class="folder-header"><span class="folder-name">${folder.name}</span><button class="ai-dl-btn del-btn" onclick="deleteFolder('${fid}')">SIL</button></div><div class="folder-cameras">${camTags||'<span style="font-size:9px;color:var(--text3);">Kamera yok</span>'}</div><div class="folder-add-cam"><select id="folder-cam-sel-${fid}" style="flex:1;height:26px;font-size:10px;background:var(--bg3);color:var(--accent);border:1px solid var(--border2);border-radius:var(--r);font-family:inherit;"><option value="">Kamera ekle...</option><option value="WIDE">WIDE</option><option value="NARROW">NARROW</option><option value="THERMAL">THERMAL</option><option value="WEBCAM">WEBCAM</option></select><button class="ai-dl-btn" onclick="addCamToFolder('${fid}')">EKLE</button></div></div>`;
   }
+  grid.innerHTML = html;
+}
+
+async function createFolder() { const input = document.getElementById("new-folder-name"); const name = input.value.trim(); if (!name) return; try { const res = await fetch("/api/folders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name})}); const d = await res.json(); if (d.ok) { input.value=""; loadFolders(); } else alert(d.error||"Hata"); } catch(e) {} }
+async function deleteFolder(fid) { if (!confirm("Klasor silinecek. Emin misiniz?")) return; await fetch(`/api/folders/${fid}`,{method:"DELETE"}); loadFolders(); }
+async function addCamToFolder(fid) { const sel = document.getElementById(`folder-cam-sel-${fid}`); const cam = sel.value; if (!cam) return; await fetch(`/api/folders/${fid}/cameras`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({camera_key:cam})}); loadFolders(); }
+async function removeCamFromFolder(fid, cam) { await fetch(`/api/folders/${fid}/cameras/${cam}`,{method:"DELETE"}); loadFolders(); }
+
+async function loadAiProfiles() { try { const res = await fetch("/api/ai_profiles"); const data = await res.json(); renderProfileList(data.profiles||[]); } catch(e) {} }
+function renderProfileList(profiles) {
+  const list = document.getElementById("profile-list"); if (!list) return;
+  if (profiles.length===0) { list.innerHTML='<div style="font-size:10px;color:var(--text3);padding:4px;">Kayitli profil yok</div>'; return; }
+  list.innerHTML = profiles.map(p => `<div class="profile-item"><span class="profile-name">${p}</span><button class="ai-dl-btn" onclick="applyProfile('${p}')">UYGULA</button><button class="ai-dl-btn del-btn" onclick="deleteProfile('${p}')">SIL</button></div>`).join("");
+}
+async function saveAiProfile() { const input = document.getElementById("profile-name-input"); const name = input.value.trim(); if (!name) return; try { const res = await fetch("/api/ai_profiles/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name})}); const d = await res.json(); if (d.ok) { input.value=""; loadAiProfiles(); } else alert(d.error||"Hata"); } catch(e) {} }
+async function applyProfile(name) { try { const res = await fetch("/api/ai_profiles/load",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name})}); const d = await res.json(); if (d.ok) loadAiModules(); else alert(d.error||"Profil uygulanamadi"); } catch(e) {} }
+async function deleteProfile(name) { if (!confirm(`"${name}" profili silinecek?`)) return; await fetch(`/api/ai_profiles/${encodeURIComponent(name)}`,{method:"DELETE"}); loadAiProfiles(); }
+
+/* sb-log toggle logsVisible */
+(function() {
+  const sbLog = document.getElementById("sb-log");
+  if (sbLog) {
+    const orig = sbLog.onclick;
+    sbLog.onclick = function() { if (orig) orig.call(this); logsVisible = !logsVisible; };
+  }
+})();
 </script>
 </body>
 </html>

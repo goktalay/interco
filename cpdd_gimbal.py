@@ -156,35 +156,35 @@ class CPDD075Controller:
         """Kamera görüntü kaynağını değiştirir.
 
         Seri Protokol V2.14 - Komut 0x25 (Video display mode settings):
-            param 0x00 = Kızılötesi video 1  (THERMAL)
-            param 0x01 = Görünür ışık video 1 (WIDE)
-            param 0x02 = Görünür ışık video 2 (NARROW / tele)
-            param 0x03 = Kızılötesi video 2   (FUSION / EO+IR)
+            param 0 = Infrared video 1  (THERMAL)
+            param 1 = Visible light 1   (WIDE)
+            param 2 = Visible light 2   (NARROW / tele)
+            param 3 = Infrared video 2  (FUSION / EO+IR)
+
+        Protokol notu: Komutlar iletişim frekansında sürekli iletilir,
+        cihaz kenar geçişi algılar. Bu yüzden komutu birkaç kez göndeririz.
         """
         mode_u = mode.upper().strip()
         self.current_view = mode_u
 
+        bin_param_map = {"WIDE": "01", "THERMAL": "00", "NARROW": "02", "FUSION": "03"}
+        bin_param = bin_param_map.get(mode_u, "00")
+
         if mode_u == "WIDE":
             self.zoom_level = 1.0
-            self.send_custom_hex("25", "01 00 00 00")
-            self.send_json_cmd({"cmd": "set_view", "mode": 1})
-            self.last_status = "NET UDP -> GENİŞ (VISIBLE-1)"
-
         elif mode_u == "NARROW":
             self.zoom_level = 4.0
-            self.send_custom_hex("25", "02 00 00 00")
-            self.send_json_cmd({"cmd": "set_view", "mode": 2})
-            self.last_status = "NET UDP -> DAR (TELE)"
 
-        elif mode_u == "THERMAL":
-            self.send_custom_hex("25", "00 00 00 00")
-            self.send_json_cmd({"cmd": "set_view", "mode": 0})
-            self.last_status = "NET UDP -> TERMAL (IR)"
+        target = self._get_target()
+        print(f"[CPDD] switch_view({mode_u}) -> 0x25 param=0x{bin_param} -> {target[0]}:{target[1]}")
 
-        elif mode_u == "FUSION":
-            self.send_custom_hex("25", "03 00 00 00")
-            self.send_json_cmd({"cmd": "set_view", "mode": 3})
-            self.last_status = "NET UDP -> EO+IR (FUSION)"
+        # 0x25 doğrudan kamera geçişi — 3 kez gönder (edge detection için)
+        for i in range(3):
+            self.send_custom_hex("25", f"{bin_param} 00 00 00")
+            if i < 2:
+                time.sleep(0.05)
+
+        self.last_status = f"NET UDP -> {mode_u} (0x25 param=0x{bin_param})"
 
     def zoom_step(self, direction: int):
         if direction > 0:

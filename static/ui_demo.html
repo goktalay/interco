@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INTERCO GCS Demo</title>
+<style>
+:root {
+  --bg: #080c0a; --bg2: #0f1511; --bg3: #141a16; --bg4: rgba(10,15,12,0.96);
+  --glass: rgba(8,13,10,0.88); --accent: #39ff5a; --cyan: #00d4ff;
+  --amber: #ffb340; --red: #ff3b30; --purple: #bf5af2;
+  --text: #c8e0d0; --text2: rgba(170,205,185,0.6); --text3: rgba(130,170,145,0.4);
+  --border: rgba(57,255,90,0.12); --border2: rgba(57,255,90,0.22);
+  --sb: 52px; --r: 4px;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Courier New',Consolas,monospace;font-size:12px;}
+
+/* SIDEBAR */
+#sidebar{
+  position:fixed;left:0;top:0;bottom:0;width:var(--sb);
+  background:var(--bg2);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;align-items:center;
+  padding:10px 0;gap:4px;z-index:300;
+}
+.sb-logo{color:var(--accent);font-size:11px;font-weight:700;letter-spacing:1px;padding:6px 0 10px;text-align:center;line-height:1.2;border-bottom:1px solid var(--border);width:100%;margin-bottom:4px;}
+.sb-btn{
+  width:40px;height:40px;border:1px solid var(--border2);border-radius:var(--r);
+  background:transparent;color:var(--text2);cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  transition:all .15s;font-size:7px;letter-spacing:.5px;text-transform:uppercase;
+}
+.sb-btn:hover,.sb-btn.active{background:rgba(57,255,90,.08);border-color:var(--accent);color:var(--accent);}
+.sb-btn svg{width:16px;height:16px;}
+.sb-sep{width:28px;height:1px;background:var(--border);margin:4px 0;}
+.sb-spacer{flex:1;}
+
+/* APP GRID */
+#app{
+  position:fixed;left:var(--sb);right:0;top:0;bottom:0;
+  display:grid;grid-template-rows:46px 1fr 46px;
+}
+
+/* TOP BAR */
+#top-bar{
+  grid-row:1;background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:0;padding:0 10px;
+}
+.tb-brand{color:var(--accent);font-size:11px;font-weight:700;letter-spacing:2px;padding-right:14px;border-right:1px solid var(--border);}
+.tb-cells{display:flex;flex:1;gap:0;}
+.tb-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 12px;border-right:1px solid var(--border);min-width:70px;}
+.tb-cell-lbl{font-size:8px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;}
+.tb-cell-val{font-size:11px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;margin-top:1px;}
+.tb-cell-val.warn{color:var(--amber);}
+.tb-cell-val.ok{color:var(--accent);}
+.tb-clock{margin-left:auto;font-size:11px;color:var(--cyan);font-weight:700;letter-spacing:1px;}
+
+/* VIEWS */
+#views{grid-row:2;display:flex;overflow:hidden;position:relative;}
+
+/* CAMERA */
+#camera-wrap{flex:60;min-width:0;position:relative;overflow:hidden;background:#000;}
+#camera-stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+#cam-bg{position:absolute;inset:0;background:radial-gradient(ellipse at center, #0a1a0e 0%, #030806 100%);}
+.cam-noise{position:absolute;inset:0;opacity:.04;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");}
+#hud-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+
+/* HUD elements */
+.hud-corner{position:absolute;width:18px;height:18px;border-color:rgba(57,255,90,.5);border-style:solid;}
+.hud-tl{top:14px;left:14px;border-width:2px 0 0 2px;}
+.hud-tr{top:14px;right:14px;border-width:2px 2px 0 0;}
+.hud-bl{bottom:14px;left:14px;border-width:0 0 2px 2px;}
+.hud-br{bottom:14px;right:14px;border-width:0 2px 2px 0;}
+.hud-reticle{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:40px;height:40px;border:1px solid rgba(57,255,90,.4);border-radius:50%;}
+.hud-reticle::before,.hud-reticle::after{content:'';position:absolute;background:rgba(57,255,90,.4);}
+.hud-reticle::before{top:50%;left:50%;transform:translate(-50%,-50%);width:4px;height:4px;border-radius:50%;}
+.hud-reticle::after{top:-8px;left:50%;transform:translateX(-50%);width:1px;height:6px;}
+.hud-fps{position:absolute;top:14px;left:50%;transform:translateX(-50%);font-size:9px;color:rgba(57,255,90,.6);letter-spacing:1px;}
+.cam-label{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);font-size:9px;color:rgba(57,255,90,.5);letter-spacing:3px;text-transform:uppercase;}
+.hud-info-tl{position:absolute;top:28px;left:28px;font-size:9px;color:rgba(57,255,90,.55);line-height:1.6;}
+.hud-info-tr{position:absolute;top:28px;right:28px;font-size:9px;color:rgba(57,255,90,.55);line-height:1.6;text-align:right;}
+.hud-info-bl{position:absolute;bottom:28px;left:28px;font-size:9px;color:rgba(57,255,90,.55);line-height:1.6;}
+
+/* VIEW DIVIDER */
+#view-divider{width:4px;background:var(--border);cursor:col-resize;flex-shrink:0;position:relative;z-index:10;}
+#view-divider:hover{background:rgba(57,255,90,.3);}
+
+/* MAP */
+#map-wrap{flex:40;min-width:0;position:relative;overflow:hidden;}
+#map-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 60% 50%, #0d1f14 0%, #060e09 100%);}
+.map-grid{position:absolute;inset:0;opacity:.08;background-image:linear-gradient(rgba(57,255,90,.5) 1px, transparent 1px),linear-gradient(90deg, rgba(57,255,90,.5) 1px, transparent 1px);background-size:40px 40px;}
+.map-label{position:absolute;top:10px;left:10px;font-size:9px;color:rgba(57,255,90,.4);letter-spacing:2px;}
+.drone-dot{position:absolute;top:50%;left:55%;transform:translate(-50%,-50%);}
+.drone-dot svg{width:28px;height:28px;animation:drone-pulse 2s infinite;}
+@keyframes drone-pulse{0%,100%{opacity:1;}50%{opacity:.6;}}
+.home-dot{position:absolute;top:52%;left:48%;transform:translate(-50%,-50%);}
+.home-dot svg{width:10px;height:10px;}
+.map-coords{position:absolute;bottom:10px;right:10px;font-size:8px;color:rgba(0,212,255,.5);line-height:1.6;text-align:right;}
+.heading-line{position:absolute;top:49%;left:55%;transform-origin:0 1px;width:50px;height:2px;background:linear-gradient(90deg,rgba(255,59,48,.7),transparent);transform:rotate(-20deg);}
+
+/* TARGET DOCK */
+#targets-dock{position:absolute;bottom:0;left:0;right:0;height:80px;display:flex;gap:6px;padding:6px;background:linear-gradient(0deg,rgba(8,13,10,.95) 0%,transparent 100%);pointer-events:none;overflow-x:auto;}
+.target-pod{width:70px;height:68px;border:1px solid var(--border2);border-radius:var(--r);background:rgba(10,15,12,.9);overflow:hidden;pointer-events:all;cursor:pointer;transition:border-color .15s;flex-shrink:0;}
+.target-pod:hover{border-color:var(--amber);}
+.target-pod.locked{border-color:var(--red);}
+.pod-img{width:100%;height:40px;background:linear-gradient(135deg,#0a1810,#1a0808);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+.pod-img::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.2) 3px,rgba(0,0,0,.2) 4px);}
+.pod-box{width:24px;height:16px;border:1.5px solid var(--red);position:absolute;}
+.pod-meta{padding:3px 4px;font-size:8px;color:var(--text2);display:flex;justify-content:space-between;}
+.pod-action{padding:0 4px 2px;font-size:7px;color:var(--red);text-align:center;letter-spacing:.5px;}
+
+/* BOTTOM BAR */
+#bottom-bar{
+  grid-row:3;background:var(--bg2);border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:0;padding:0 10px;overflow:hidden;
+}
+.bb-mode{font-size:11px;font-weight:700;color:var(--cyan);letter-spacing:1px;padding-right:12px;border-right:1px solid var(--border);}
+.mode-select{background:var(--bg3);color:var(--accent);border:1px solid var(--border2);border-radius:var(--r);padding:3px 6px;font-size:10px;font-family:inherit;height:26px;margin:0 8px;}
+.tac-btn{height:26px;padding:0 10px;border:1px solid var(--border2);border-radius:var(--r);background:transparent;color:var(--text2);cursor:pointer;font-size:9px;font-family:inherit;letter-spacing:.5px;transition:all .15s;white-space:nowrap;}
+.tac-btn:hover{background:rgba(57,255,90,.08);color:var(--accent);border-color:var(--accent);}
+.tac-btn.active{background:rgba(57,255,90,.12);color:var(--accent);border-color:var(--accent);}
+.bb-sep{width:1px;height:24px;background:var(--border);margin:0 6px;flex-shrink:0;}
+.bb-right{margin-left:auto;display:flex;align-items:center;gap:6px;}
+.bb-status{font-size:9px;color:var(--text3);letter-spacing:.5px;}
+.abort-btn{height:26px;padding:0 10px;border:1px solid var(--red);border-radius:var(--r);background:rgba(255,59,48,.1);color:var(--red);cursor:pointer;font-size:9px;font-family:inherit;letter-spacing:.5px;display:none;}
+.abort-btn.show{display:flex;align-items:center;gap:4px;}
+
+/* FLOATING PANELS */
+.fp{display:none;position:fixed;z-index:200;flex-direction:column;min-width:280px;max-width:380px;background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border2);border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.5);overflow:hidden;}
+.fp.open{display:flex;}
+.fp-head{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);background:rgba(13,19,16,.6);cursor:move;user-select:none;}
+.fp-head-title{font-size:10px;font-weight:700;letter-spacing:1px;color:var(--text);text-transform:uppercase;flex:1;}
+.fp-close-btn{width:18px;height:18px;border:1px solid var(--border2);border-radius:2px;background:transparent;color:var(--text3);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;line-height:1;}
+.fp-close-btn:hover{border-color:var(--red);color:var(--red);}
+.fp-body{padding:10px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
+.fp-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(57,255,90,.05);}
+.fp-row-lbl{font-size:9px;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;}
+.fp-row-val{font-size:11px;font-weight:700;color:var(--cyan);font-variant-numeric:tabular-nums;}
+.fp-row-val.ok{color:var(--accent);}
+.fp-row-val.warn{color:var(--amber);}
+.fp-row-val.bad{color:var(--red);}
+.fp-section{font-size:8px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;padding-top:4px;border-top:1px solid var(--border);}
+
+/* AI panel */
+.ai-mod-card{padding:8px;border:1px solid var(--border);border-radius:var(--r);background:rgba(13,19,16,.4);display:flex;flex-direction:column;gap:4px;}
+.ai-mod-card.active{border-color:rgba(57,255,90,.35);background:rgba(13,30,18,.5);}
+.ai-mod-header{display:flex;align-items:center;justify-content:space-between;}
+.ai-mod-name{font-size:10px;font-weight:700;color:var(--text);}
+.ai-toggle-wrap{display:flex;align-items:center;gap:4px;}
+.toggle-switch{width:30px;height:16px;border-radius:8px;background:rgba(57,255,90,.15);border:1px solid var(--border2);position:relative;cursor:pointer;}
+.toggle-switch.on{background:rgba(57,255,90,.3);border-color:var(--accent);}
+.toggle-knob{position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:var(--text3);transition:left .2s;}
+.toggle-switch.on .toggle-knob{left:16px;background:var(--accent);}
+
+/* Notifications / badges */
+.badge{display:inline-flex;align-items:center;justify-content:center;padding:1px 5px;border-radius:2px;font-size:8px;font-weight:700;letter-spacing:.5px;}
+.badge-green{background:rgba(57,255,90,.15);color:var(--accent);border:1px solid rgba(57,255,90,.3);}
+.badge-red{background:rgba(255,59,48,.15);color:var(--red);border:1px solid rgba(255,59,48,.3);}
+.badge-amber{background:rgba(255,179,64,.15);color:var(--amber);border:1px solid rgba(255,179,64,.3);}
+.badge-cyan{background:rgba(0,212,255,.12);color:var(--cyan);border:1px solid rgba(0,212,255,.25);}
+
+/* Tabs */
+.fp-tabs{display:flex;border-bottom:1px solid var(--border);background:rgba(8,13,10,.4);}
+.fp-tab{padding:6px 10px;font-size:9px;letter-spacing:.8px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;text-transform:uppercase;}
+.fp-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* Modals */
+.modal{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.7);align-items:center;justify-content:center;}
+.modal.open{display:flex;}
+.modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:20px;min-width:260px;display:flex;flex-direction:column;gap:12px;}
+.modal-title{font-size:12px;font-weight:700;color:var(--accent);letter-spacing:1px;}
+.modal-label{font-size:9px;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px;}
+.modal-input{width:100%;height:30px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:0 8px;color:var(--accent);font-family:inherit;font-size:12px;}
+.modal-btns{display:flex;gap:8px;margin-top:4px;}
+.modal-btn{flex:1;height:30px;border-radius:var(--r);cursor:pointer;font-size:10px;font-family:inherit;font-weight:700;letter-spacing:.5px;border:1px solid var(--border2);background:transparent;color:var(--text2);}
+.modal-btn.primary{border-color:var(--accent);background:rgba(57,255,90,.12);color:var(--accent);}
+
+body{cursor:default;}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div class="sb-logo">GCS<br>v4.0</div>
+
+  <!-- Kamera butonu -->
+  <button class="sb-btn active" id="sb-cam" onclick="demoSbClick(this,'camera')" title="Kamera">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+    <span>KAM</span>
+  </button>
+
+  <!-- Harita butonu -->
+  <button class="sb-btn" id="sb-map" onclick="demoSbClick(this,'map')" title="Harita">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+    <span>HRT</span>
+  </button>
+
+  <div class="sb-sep"></div>
+
+  <!-- Bağlantı paneli -->
+  <button class="sb-btn" id="sb-connection" onclick="fpToggle('connection',this)" title="Bağlantı">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12" y2="20"/></svg>
+    <span>BAĞ</span>
+  </button>
+
+  <!-- AI paneli -->
+  <button class="sb-btn" id="sb-ai" onclick="fpToggle('ai',this)" title="AI">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    <span>AI</span>
+  </button>
+
+  <!-- Ayarlar paneli -->
+  <button class="sb-btn" id="sb-settings" onclick="fpToggle('settings',this)" title="Ayarlar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <span>AYR</span>
+  </button>
+
+  <!-- Log paneli -->
+  <button class="sb-btn" id="sb-log" onclick="fpToggle('log',this)" title="Log">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    <span>LOG</span>
+  </button>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+
+  <!-- TOP BAR -->
+  <div id="top-bar">
+    <div class="tb-brand">INTERCO</div>
+    <div class="tb-cells">
+      <div class="tb-cell"><div class="tb-cell-lbl">ALT</div><div class="tb-cell-val" id="tb-alt">0.0 m</div></div>
+      <div class="tb-cell"><div class="tb-cell-lbl">HIZ</div><div class="tb-cell-val" id="tb-spd">0.0 m/s</div></div>
+      <div class="tb-cell"><div class="tb-cell-lbl">BAT</div><div class="tb-cell-val warn" id="tb-bat">16.4 V</div></div>
+      <div class="tb-cell"><div class="tb-cell-lbl">UYDU</div><div class="tb-cell-val ok" id="tb-sat">12</div></div>
+      <div class="tb-cell"><div class="tb-cell-lbl">KİLİT</div><div class="tb-cell-val warn" id="tb-arm">DISARM</div></div>
+      <div class="tb-cell"><div class="tb-cell-lbl">AI</div><div class="tb-cell-val" id="tb-ai">STANDBY</div></div>
+    </div>
+    <div class="tb-clock" id="tb-clock">00:00:00</div>
+  </div>
+
+  <!-- VIEWS -->
+  <div id="views">
+
+    <!-- CAMERA WRAP -->
+    <div id="camera-wrap">
+      <div id="camera-stage">
+        <div id="cam-bg"></div>
+        <div class="cam-noise"></div>
+        <!-- HUD corners -->
+        <div class="hud-corner hud-tl"></div>
+        <div class="hud-corner hud-tr"></div>
+        <div class="hud-corner hud-bl"></div>
+        <div class="hud-corner hud-br"></div>
+        <!-- Reticle -->
+        <div class="hud-reticle"></div>
+        <!-- Info overlays -->
+        <div class="hud-fps" id="hud-fps-label">EO-WIDE | 25fps</div>
+        <div class="cam-label">TARAMA MODU</div>
+        <div class="hud-info-tl" id="hud-tl">
+          PITCH: <span id="hi-pitch">+2.1°</span><br>
+          ROLL: <span id="hi-roll">+0.4°</span><br>
+          YAW: <span id="hi-yaw">247°</span>
+        </div>
+        <div class="hud-info-tr" id="hud-tr">
+          BASINÇ: 1013 hPa<br>
+          SICAKLIK: 18°C<br>
+          BAĞLANTI: <span style="color:var(--accent)">BAĞLI</span>
+        </div>
+        <div class="hud-info-bl">
+          LAT: <span id="hi-lat">39.9255</span><br>
+          LON: <span id="hi-lon">32.8663</span>
+        </div>
+        <!-- HUD canvas -->
+        <canvas id="hud-canvas"></canvas>
+      </div>
+      <!-- Target pods -->
+      <div id="targets-dock">
+        <div class="target-pod locked" onclick="demoAbort()">
+          <div class="pod-img"><div class="pod-box"></div></div>
+          <div class="pod-meta"><span style="color:var(--red)">TD-01</span><span>~140m</span></div>
+          <div class="pod-action">KİLİTLİ [İPTAL]</div>
+        </div>
+        <div class="target-pod" onclick="demoLock(this)">
+          <div class="pod-img"><div class="pod-box" style="border-color:var(--amber)"></div></div>
+          <div class="pod-meta"><span style="color:var(--amber)">TD-02</span><span>~210m</span></div>
+          <div class="pod-action" style="color:var(--amber)">ANGAJMAN</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW DIVIDER -->
+    <div id="view-divider"></div>
+
+    <!-- MAP WRAP -->
+    <div id="map-wrap">
+      <div id="map-bg"></div>
+      <div class="map-grid"></div>
+      <div class="map-label">3D HARİTA | CESIUM</div>
+      <!-- Heading line -->
+      <div class="heading-line" id="heading-line"></div>
+      <!-- Drone -->
+      <div class="drone-dot">
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <line x1="14" y1="14" x2="50" y2="50" stroke="#39ff5a" stroke-width="4" stroke-linecap="round"/>
+          <line x1="50" y1="14" x2="14" y2="50" stroke="#39ff5a" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="14" cy="14" r="7" fill="rgba(57,255,90,0.2)" stroke="#39ff5a" stroke-width="2.5"/>
+          <circle cx="50" cy="14" r="7" fill="rgba(57,255,90,0.2)" stroke="#39ff5a" stroke-width="2.5"/>
+          <circle cx="14" cy="50" r="7" fill="rgba(57,255,90,0.2)" stroke="#39ff5a" stroke-width="2.5"/>
+          <circle cx="50" cy="50" r="7" fill="rgba(57,255,90,0.2)" stroke="#39ff5a" stroke-width="2.5"/>
+          <polygon points="32,6 24,26 32,21 40,26" fill="#ff2e2e" stroke="#fff" stroke-width="1.2"/>
+          <circle cx="32" cy="32" r="5" fill="#050a07" stroke="#39ff5a" stroke-width="2"/>
+        </svg>
+      </div>
+      <!-- Home -->
+      <div class="home-dot">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="6" fill="rgba(191,90,242,.25)" stroke="#bf5af2" stroke-width="2"/>
+          <text x="12" y="16" text-anchor="middle" fill="#c4b5fd" font-size="8" font-family="Consolas" font-weight="bold">H</text>
+        </svg>
+      </div>
+      <!-- Target entity (simüle) -->
+      <div style="position:absolute;top:40%;left:65%;transform:translate(-50%,-50%);">
+        <svg width="24" height="24" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="22" fill="rgba(255,46,46,0.15)" stroke="#ff2e2e" stroke-width="2.5" stroke-dasharray="8 4"/>
+          <line x1="32" y1="4" x2="32" y2="18" stroke="#ff2e2e" stroke-width="2.5"/>
+          <line x1="32" y1="46" x2="32" y2="60" stroke="#ff2e2e" stroke-width="2.5"/>
+          <line x1="4" y1="32" x2="18" y2="32" stroke="#ff2e2e" stroke-width="2.5"/>
+          <line x1="46" y1="32" x2="60" y2="32" stroke="#ff2e2e" stroke-width="2.5"/>
+          <polygon points="32,22 42,32 32,42 22,32" fill="#ff2e2e" stroke="#fff" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <!-- Engagement line (simüle) -->
+      <svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;">
+        <line id="eng-line" x1="55%" y1="50%" x2="65%" y2="40%" stroke="#ffaa00" stroke-width="1.5" stroke-dasharray="8 4" opacity=".7"/>
+      </svg>
+      <div class="map-coords">
+        LAT: 39.9255<br>
+        LON: 32.8663<br>
+        ALT: <span id="map-alt">0.0</span>m
+      </div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM BAR -->
+  <div id="bottom-bar">
+    <div class="bb-mode" id="bottom-mode">GÖZETLEME</div>
+
+    <select class="mode-select" onchange="demoModeChange(this.value)">
+      <option value="SURVEY">GÖZETLEME</option>
+      <option value="HOLD">BEKLE</option>
+      <option value="RTH">EVE DÖN</option>
+      <option value="INTERCEPT">ANGAJMAN</option>
+    </select>
+
+    <div class="bb-sep"></div>
+
+    <button class="tac-btn" id="btn-tko" onclick="demoTakeoff()">KALKIŞ</button>
+
+    <div class="bb-sep"></div>
+
+    <button class="tac-btn active" id="btn-wide">EO-GEN</button>
+    <button class="tac-btn" id="btn-narrow">EO-DAR</button>
+    <button class="tac-btn" id="btn-thermal">IR-TERMAL</button>
+
+    <div class="bb-sep"></div>
+
+    <button class="tac-btn" onclick="demoSendCmd('RC_HOVER')">HOVER</button>
+    <button class="tac-btn" onclick="demoSendCmd('RC_TRACK')">İZLE</button>
+
+    <div class="bb-right">
+      <span class="bb-status" id="bb-status">BAĞLANTI BEKLENİYOR...</span>
+      <button class="abort-btn show" onclick="demoAbort()">⬛ ANGAJMANI İPTAL</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- BAĞLANTI FLOATING PANEL -->
+<div class="fp" id="panel-connection" style="left:62px;top:60px;width:300px;">
+  <div class="fp-head">
+    <svg style="width:12px;height:12px;color:var(--cyan)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><line x1="12" y1="20" x2="12" y2="20"/></svg>
+    <span class="fp-head-title">BAĞLANTI</span>
+    <button class="fp-close-btn" onclick="fpToggle('connection',null)">×</button>
+  </div>
+  <div class="fp-tabs">
+    <div class="fp-tab active">DURUM</div>
+    <div class="fp-tab">CPDD</div>
+    <div class="fp-tab">KAMERA</div>
+  </div>
+  <div class="fp-body">
+    <div class="fp-row"><span class="fp-row-lbl">MAVLINK</span><span class="fp-row-val bad">BAĞLANMIYOR</span></div>
+    <div class="fp-row"><span class="fp-row-lbl">CPDD UDP</span><span class="fp-row-val warn">BEKLEMEDE</span></div>
+    <div class="fp-row"><span class="fp-row-lbl">KAM DURUMU</span><span class="fp-row-val ok">EO-WIDE ONLINE</span></div>
+    <div class="fp-row"><span class="fp-row-lbl">FPS</span><span class="fp-row-val" id="fp-fps">25 fps</span></div>
+    <div class="fp-section">TELEMETRİ</div>
+    <div class="fp-row"><span class="fp-row-lbl">PİTCH / ROLL</span><span class="fp-row-val" id="fp-pr">+2.1° / +0.4°</span></div>
+    <div class="fp-row"><span class="fp-row-lbl">TIRMANMA</span><span class="fp-row-val" id="fp-climb">+0.0 m/s</span></div>
+    <div class="fp-row"><span class="fp-row-lbl">GAZ</span><span class="fp-row-val" id="fp-thr">0%</span></div>
+    <div class="fp-row"><span class="fp-row-lbl">PERFORMANS</span><span style="font-size:9px;color:var(--text2)">CUDA | H.264 | 1920×1080 | 12ms</span></div>
+  </div>
+</div>
+
+<!-- AI FLOATING PANEL -->
+<div class="fp" id="panel-ai" style="left:62px;top:60px;width:320px;">
+  <div class="fp-head">
+    <svg style="width:12px;height:12px;color:var(--accent)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/></svg>
+    <span class="fp-head-title">AI MODÜLLER</span>
+    <button class="fp-close-btn" onclick="fpToggle('ai',null)">×</button>
+  </div>
+  <div class="fp-tabs">
+    <div class="fp-tab active">MODÜLLER</div>
+    <div class="fp-tab">KLASÖRLER</div>
+    <div class="fp-tab">PROFİLLER</div>
+  </div>
+  <div class="fp-body">
+    <div class="ai-mod-card active">
+      <div class="ai-mod-header">
+        <span class="ai-mod-name">👤 İnsan Tanıma</span>
+        <div class="ai-toggle-wrap">
+          <span class="badge badge-green">AKTİF</span>
+          <div class="toggle-switch on"><div class="toggle-knob"></div></div>
+        </div>
+      </div>
+      <span style="font-size:9px;color:var(--text3)">3 tespit | 24fps | 8ms</span>
+    </div>
+    <div class="ai-mod-card active">
+      <div class="ai-mod-header">
+        <span class="ai-mod-name">🚗 Araç Tanıma</span>
+        <div class="ai-toggle-wrap">
+          <span class="badge badge-green">AKTİF</span>
+          <div class="toggle-switch on"><div class="toggle-knob"></div></div>
+        </div>
+      </div>
+      <span style="font-size:9px;color:var(--text3)">1 tespit | 24fps | 11ms</span>
+    </div>
+    <div class="ai-mod-card">
+      <div class="ai-mod-header">
+        <span class="ai-mod-name">✈️ Hava Aracı Tanıma</span>
+        <div class="ai-toggle-wrap">
+          <span class="badge badge-amber">İNDİRİLDİ</span>
+          <div class="toggle-switch"><div class="toggle-knob"></div></div>
+        </div>
+      </div>
+      <span style="font-size:9px;color:var(--text3)">0 tespit | — fps</span>
+    </div>
+    <div class="ai-mod-card">
+      <div class="ai-mod-header">
+        <span class="ai-mod-name">📝 OCR - Metin Tanıma</span>
+        <div class="ai-toggle-wrap">
+          <span class="badge badge-red">İNDİRİLMEDİ</span>
+        </div>
+      </div>
+      <button style="margin-top:4px;padding:2px 8px;font-size:8px;border:1px solid var(--border2);border-radius:2px;background:transparent;color:var(--cyan);cursor:pointer;font-family:inherit;">↓ İNDİR</button>
+    </div>
+  </div>
+</div>
+
+<!-- AYARLAR FLOATING PANEL -->
+<div class="fp" id="panel-settings" style="left:62px;top:60px;width:360px;max-height:80vh;">
+  <div class="fp-head">
+    <svg style="width:12px;height:12px;color:var(--text2)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <span class="fp-head-title">AYARLAR</span>
+    <button class="fp-close-btn" onclick="fpToggle('settings',null)">×</button>
+  </div>
+  <div class="fp-tabs">
+    <div class="fp-tab active" id="tab-drone-btn" onclick="settingsTab('drone',this)">İHA</div>
+    <div class="fp-tab" id="tab-cpdd-btn" onclick="settingsTab('cpdd',this)">CPDD</div>
+    <div class="fp-tab" id="tab-harita-btn" onclick="settingsTab('harita',this)">HARİTA</div>
+    <div class="fp-tab" id="tab-kamera-btn" onclick="settingsTab('kamera',this)">KAMERA</div>
+  </div>
+  <div class="fp-body" style="max-height:calc(80vh - 100px);">
+    <!-- Drone tab -->
+    <div id="tab-drone">
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div>
+          <div class="modal-label">TELEMETRİ PROTOKOLÜ</div>
+          <select style="width:100%;height:28px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:0 6px;color:var(--accent);font-family:inherit;font-size:11px;">
+            <option>UDP (MAVLink)</option><option>TCP</option><option>SITL (Test)</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <div style="flex:2">
+            <div class="modal-label">IP ADRESİ</div>
+            <input class="modal-input" value="0.0.0.0" readonly>
+          </div>
+          <div style="flex:1">
+            <div class="modal-label">PORT</div>
+            <input class="modal-input" value="14550" readonly>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:4px;">
+          <div style="flex:1">
+            <div class="modal-label">TORK MAK.</div>
+            <input class="modal-input" value="1.0" readonly>
+          </div>
+          <div style="flex:1">
+            <div class="modal-label">YAW GAIN</div>
+            <input class="modal-input" value="1.8" readonly>
+          </div>
+          <div style="flex:1">
+            <div class="modal-label">PITCH GAIN</div>
+            <input class="modal-input" value="1.5" readonly>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="tab-cpdd" style="display:none;flex-direction:column;gap:6px;">
+      <div>
+        <div class="modal-label">CPDD IP</div>
+        <input class="modal-input" value="192.168.144.108" readonly>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <div style="flex:1"><div class="modal-label">UDP PORT</div><input class="modal-input" value="9554" readonly></div>
+        <div style="flex:1"><div class="modal-label">LOCAL PORT</div><input class="modal-input" value="7002" readonly></div>
+      </div>
+      <div>
+        <div class="modal-label">RTSP URL</div>
+        <input class="modal-input" value="rtsp://192.168.144.108/live/0" readonly style="font-size:9px;">
+      </div>
+    </div>
+    <div id="tab-harita" style="display:none;flex-direction:column;gap:6px;">
+      <div>
+        <div class="modal-label">BING MAPS API KEY</div>
+        <input class="modal-input" value="••••••••••••••••" type="password" readonly>
+      </div>
+      <div style="font-size:9px;color:var(--text3);padding:4px;">Bing Aerial görüntüleri için gereklidir. Ücretsiz anahtar alabilirsiniz.</div>
+    </div>
+    <div id="tab-kamera" style="display:none;flex-direction:column;gap:6px;">
+      <div style="display:flex;gap:6px;">
+        <div style="flex:1"><div class="modal-label">KAM TILT (°)</div><input class="modal-input" value="30" readonly></div>
+        <div style="flex:1"><div class="modal-label">KAM VFOV (°)</div><input class="modal-input" value="60" readonly></div>
+      </div>
+      <div>
+        <div class="modal-label">TEST KAYNAĞI</div>
+        <select style="width:100%;height:28px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:0 6px;color:var(--accent);font-family:inherit;font-size:11px;">
+          <option>WEBCAM</option><option>Video Dosyası</option><option>RTSP URL</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:6px;padding-top:8px;border-top:1px solid var(--border);">
+      <button style="width:100%;height:30px;border:1px solid var(--accent);border-radius:var(--r);background:rgba(57,255,90,.1);color:var(--accent);font-family:inherit;font-size:10px;font-weight:700;letter-spacing:.5px;cursor:pointer;">KAYDET VE TEST ET</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOG FLOATING PANEL -->
+<div class="fp" id="panel-log" style="left:62px;top:60px;width:380px;max-height:70vh;">
+  <div class="fp-head">
+    <svg style="width:12px;height:12px;color:var(--text2)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    <span class="fp-head-title">SİSTEM LOGU</span>
+    <button class="fp-close-btn" onclick="fpToggle('log',null)">×</button>
+  </div>
+  <div style="padding:6px 10px;border-bottom:1px solid var(--border);font-size:9px;color:var(--text3);display:flex;justify-content:space-between;">
+    <span>CUDA | H.264 | 1920×1080 | AI: 12ms</span>
+    <span style="color:var(--cyan)">CANLI</span>
+  </div>
+  <div id="log-lines" style="padding:8px;overflow-y:auto;max-height:calc(70vh - 70px);display:flex;flex-direction:column;gap:2px;">
+  </div>
+</div>
+
+<!-- KALKIŞ MODAL -->
+<div class="modal" id="takeoff-modal">
+  <div class="modal-box">
+    <div class="modal-title">KALKIŞ YÜKSEKLİĞİ</div>
+    <div>
+      <div class="modal-label">HEDEF İRTİFA (m)</div>
+      <input class="modal-input" id="tko-alt" value="50">
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button onclick="demoSetAlt(10)" style="padding:4px 8px;border:1px solid var(--border2);border-radius:var(--r);background:transparent;color:var(--text2);cursor:pointer;font-size:9px;font-family:inherit;">10m</button>
+      <button onclick="demoSetAlt(30)" style="padding:4px 8px;border:1px solid var(--border2);border-radius:var(--r);background:transparent;color:var(--text2);cursor:pointer;font-size:9px;font-family:inherit;">30m</button>
+      <button onclick="demoSetAlt(50)" style="padding:4px 8px;border:1px solid var(--border2);border-radius:var(--r);background:transparent;color:var(--text2);cursor:pointer;font-size:9px;font-family:inherit;">50m</button>
+      <button onclick="demoSetAlt(100)" style="padding:4px 8px;border:1px solid var(--border2);border-radius:var(--r);background:transparent;color:var(--text2);cursor:pointer;font-size:9px;font-family:inherit;">100m</button>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn" onclick="closeTkoModal()">İPTAL</button>
+      <button class="modal-btn primary" onclick="confirmTko()">KALK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── DEMO STATE ── */
+let inAir = false, engaged = true;
+const state = {
+  pitch: 2.1, roll: 0.4, yaw: 247,
+  alt: 0, spd: 0, bat: 16.4, sat: 12,
+  armed: false, aiStatus: 'STANDBY', mode: 'GÖZETLEME'
+};
+let flightTimer = null;
+
+/* ── PANELS ── */
+const panels = { connection: 'panel-connection', ai: 'panel-ai', settings: 'panel-settings', log: 'panel-log' };
+const sbBtns = { connection: 'sb-connection', ai: 'sb-ai', settings: 'sb-settings', log: 'sb-log' };
+
+function fpToggle(name, btn) {
+  const panelEl = document.getElementById(panels[name]);
+  if (!panelEl) return;
+  const wasOpen = panelEl.classList.contains('open');
+  // Close all
+  Object.values(panels).forEach(id => { const el = document.getElementById(id); if (el) el.classList.remove('open'); });
+  Object.values(sbBtns).forEach(id => { const el = document.getElementById(id); if (el) el.classList.remove('active'); });
+  if (!wasOpen) {
+    panelEl.classList.add('open');
+    const sbEl = document.getElementById(sbBtns[name]);
+    if (sbEl) sbEl.classList.add('active');
+  }
+}
+
+function demoSbClick(el, type) { }
+
+/* ── DRAGGABLE PANELS ── */
+function makeDraggable(headId, panelId) {
+  const head = document.getElementById(headId);
+  const panel = head?.closest('.fp');
+  if (!head || !panel) return;
+  let ox, oy, px, py, dragging = false;
+  head.addEventListener('mousedown', e => {
+    dragging = true; ox = e.clientX; oy = e.clientY;
+    const r = panel.getBoundingClientRect(); px = r.left; py = r.top;
+    document.addEventListener('mousemove', mv); document.addEventListener('mouseup', mu, {once:true});
+  });
+  function mv(e) {
+    if (!dragging) return;
+    panel.style.left = (px + e.clientX - ox) + 'px';
+    panel.style.top  = (py + e.clientY - oy) + 'px';
+  }
+  function mu() { dragging = false; document.removeEventListener('mousemove', mv); }
+}
+['panel-connection','panel-ai','panel-settings','panel-log'].forEach(id => {
+  const p = document.getElementById(id);
+  if (p) {
+    const head = p.querySelector('.fp-head');
+    if (head) {
+      let ox, oy, px, py, dragging = false;
+      head.addEventListener('mousedown', e => {
+        dragging = true; ox = e.clientX; oy = e.clientY;
+        const r = p.getBoundingClientRect(); px = r.left; py = r.top;
+        document.addEventListener('mousemove', mv); document.addEventListener('mouseup', mu, {once:true});
+      });
+      function mv(e) { if (!dragging) return; p.style.left=(px+e.clientX-ox)+'px'; p.style.top=(py+e.clientY-oy)+'px'; }
+      function mu() { dragging=false; document.removeEventListener('mousemove',mv); }
+    }
+  }
+});
+
+/* ── HUD CANVAS ── */
+const canvas = document.getElementById('hud-canvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const stage = document.getElementById('camera-stage');
+  canvas.width = stage.offsetWidth; canvas.height = stage.offsetHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function drawHUD() {
+  const W = canvas.width, H = canvas.height, cx = W/2, cy = H/2;
+  ctx.clearRect(0,0,W,H);
+  if (W < 50) return;
+
+  const col = '#39ff5a';
+  ctx.save(); ctx.globalAlpha = .45; ctx.strokeStyle = col; ctx.fillStyle = col;
+  ctx.shadowColor = 'rgba(57,255,90,.2)'; ctx.shadowBlur = 2; ctx.lineWidth = 1.1;
+  ctx.font = 'bold 10px Consolas,monospace';
+
+  // Horizon line
+  ctx.save();
+  ctx.translate(cx, cy); ctx.rotate((-state.roll * Math.PI)/180);
+  ctx.translate(0, state.pitch * 4);
+  const hw = Math.min(160, W*.2);
+  ctx.beginPath(); ctx.moveTo(-hw,0); ctx.lineTo(-28,0); ctx.moveTo(28,0); ctx.lineTo(hw,0); ctx.stroke();
+  ctx.restore();
+
+  // Flight path marker (center reticle)
+  ctx.lineWidth = 1.3;
+  ctx.beginPath();
+  ctx.moveTo(cx-28,cy); ctx.lineTo(cx-10,cy); ctx.lineTo(cx-5,cy+6);
+  ctx.lineTo(cx,cy); ctx.lineTo(cx+5,cy+6); ctx.lineTo(cx+10,cy); ctx.lineTo(cx+28,cy);
+  ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx,cy-10); ctx.lineTo(cx,cy-4); ctx.stroke();
+
+  // Speed tape (left)
+  if (W > 300) {
+    const sx = Math.max(10, cx - 140); const th = Math.min(180, H*.4);
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(sx+40,cy-th/2); ctx.lineTo(sx+40,cy+th/2); ctx.stroke();
+    ctx.textAlign = 'right'; ctx.font = '9px Consolas';
+    for(let s=Math.floor(state.spd-15); s<=Math.ceil(state.spd+15); s++) {
+      if (s<0) continue;
+      const y = cy - (s-state.spd)*5.5;
+      if (s%5===0) { ctx.beginPath(); ctx.moveTo(sx+32,y); ctx.lineTo(sx+40,y); ctx.stroke(); ctx.fillText(s,sx+30,y+3); }
+    }
+    ctx.fillStyle='rgba(3,10,5,.7)'; ctx.fillRect(sx+6,cy-10,34,20); ctx.strokeRect(sx+6,cy-10,34,20);
+    ctx.fillStyle=col; ctx.font='bold 11px Consolas'; ctx.textAlign='right';
+    ctx.fillText(state.spd.toFixed(1),sx+38,cy+4);
+    ctx.font='7px Consolas'; ctx.textAlign='left';
+    ctx.fillText('SPD',sx+2,cy-th/2-4);
+
+    // Alt tape (right)
+    const ax = Math.min(W-50, cx+100);
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(ax,cy-th/2); ctx.lineTo(ax,cy+th/2); ctx.stroke();
+    ctx.textAlign='left'; ctx.font='9px Consolas';
+    for(let a=Math.floor(state.alt-25); a<=Math.ceil(state.alt+25); a++) {
+      if(a<0) continue;
+      const y = cy - (a-state.alt)*4.5;
+      if(a%10===0) { ctx.beginPath(); ctx.moveTo(ax,y); ctx.lineTo(ax+8,y); ctx.stroke(); ctx.fillText(a,ax+11,y+3); }
+    }
+    ctx.fillStyle='rgba(3,10,5,.7)'; ctx.fillRect(ax+2,cy-10,38,20); ctx.strokeRect(ax+2,cy-10,38,20);
+    ctx.fillStyle=col; ctx.font='bold 11px Consolas'; ctx.textAlign='left';
+    ctx.fillText(state.alt.toFixed(1),ax+6,cy+4);
+    ctx.font='7px Consolas';
+    ctx.fillText('ALT',ax,cy-th/2-4);
+
+    // Heading tape
+    const hdgW = Math.min(220, W*.28); const hdgY = H*.08;
+    ctx.save(); ctx.beginPath(); ctx.rect(cx-hdgW/2,hdgY-8,hdgW,28); ctx.clip();
+    ctx.font='bold 9px Consolas'; ctx.textAlign='center'; ctx.lineWidth=1;
+    const cards = {0:'N',45:'NE',90:'E',135:'SE',180:'S',225:'SW',270:'W',315:'NW'};
+    for(let d=Math.floor(state.yaw-35); d<=Math.ceil(state.yaw+35); d++) {
+      const nd = ((d%360)+360)%360; const x = cx+(d-state.yaw)*3.5;
+      if(nd%10===0) { ctx.beginPath(); ctx.moveTo(x,hdgY+12); ctx.lineTo(x,hdgY+18); ctx.stroke(); ctx.fillText(cards[nd]||String(nd).padStart(3,'0'),x,hdgY+9); }
+      else if(nd%5===0) { ctx.beginPath(); ctx.moveTo(x,hdgY+14); ctx.lineTo(x,hdgY+18); ctx.stroke(); }
+    }
+    ctx.restore();
+    ctx.fillStyle='rgba(3,10,5,.75)'; ctx.fillRect(cx-18,hdgY-2,36,16); ctx.strokeRect(cx-18,hdgY-2,36,16);
+    ctx.fillStyle=col; ctx.font='bold 10px Consolas'; ctx.textAlign='center';
+    ctx.fillText(String(Math.round(state.yaw)%360).padStart(3,'0')+'°',cx,hdgY+10);
+  }
+
+  ctx.restore();
+  requestAnimationFrame(drawHUD);
+}
+requestAnimationFrame(drawHUD);
+
+/* ── CLOCK ── */
+function updateClock() {
+  const n = new Date();
+  document.getElementById('tb-clock').textContent =
+    String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')+':'+String(n.getSeconds()).padStart(2,'0');
+}
+setInterval(updateClock, 1000); updateClock();
+
+/* ── SIMULATED TELEMETRY ── */
+let simAlt = 0, simSpd = 0, simTgtAlt = 0, simTgtSpd = 0, simPitch = 2.1, simRoll = 0.4;
+function runSimTelemetry() {
+  if (inAir) {
+    simTgtAlt = 50; simTgtSpd = 8;
+    simAlt += (simTgtAlt - simAlt) * .05;
+    simSpd += (simTgtSpd - simSpd) * .08;
+    simPitch = 2.1 + Math.sin(Date.now()/2000)*1.2;
+    simRoll = 0.4 + Math.cos(Date.now()/1800)*0.8;
+  } else {
+    simAlt *= .92; simSpd *= .88;
+  }
+  simAlt = Math.max(0, simAlt); simSpd = Math.max(0, simSpd);
+  state.alt = simAlt; state.spd = simSpd; state.pitch = simPitch; state.roll = simRoll;
+  state.yaw = (state.yaw + .15) % 360;
+
+  // Update DOM
+  document.getElementById('tb-alt').textContent = simAlt.toFixed(1) + ' m';
+  document.getElementById('tb-spd').textContent = simSpd.toFixed(1) + ' m/s';
+  document.getElementById('map-alt').textContent = simAlt.toFixed(1);
+  document.getElementById('hi-pitch').textContent = (simPitch>=0?'+':'')+simPitch.toFixed(1)+'°';
+  document.getElementById('hi-roll').textContent = (simRoll>=0?'+':'')+simRoll.toFixed(1)+'°';
+  document.getElementById('hi-yaw').textContent = Math.round(state.yaw)+'°';
+  document.getElementById('fp-pr').textContent = (simPitch>=0?'+':'')+simPitch.toFixed(1)+'° / '+(simRoll>=0?'+':'')+simRoll.toFixed(1)+'°';
+
+  if (inAir) {
+    const thr = Math.round(45 + (simAlt/50)*25 + Math.random()*5);
+    document.getElementById('fp-thr').textContent = thr + '%';
+    document.getElementById('fp-climb').textContent = simAlt < 48 ? '+'+simSpd.toFixed(1)+' m/s' : '±0.0 m/s';
+  }
+}
+setInterval(runSimTelemetry, 80);
+
+/* ── FAKE LOG ── */
+const logMessages = [
+  '[INFO] MAVLink bağlantısı bekleniyor...',
+  '[INFO] CPDD UDP soketi 7002 dinliyor',
+  '[INFO] EO-WIDE kamera akışı aktif: rtsp://192.168.144.108/live/0',
+  '[INFO] İnsan tanıma modülü yüklendi (YOLOv8n-pose.pt)',
+  '[INFO] Araç tanıma modülü yüklendi (YOLOv8s.pt)',
+  '[WARN] MAVLink bağlantısı zaman aşımı (3/5)',
+  '[INFO] Hedef kilitlendi: TD-01 (insan, ~140m)',
+  '[INFO] Angajman başlatıldı: TD-01',
+  '[INFO] Kamera: EO-WIDE → EO-NARROW geçişi',
+];
+let logIdx = 0;
+function addLog() {
+  const box = document.getElementById('log-lines');
+  if (!box) return;
+  const line = document.createElement('div');
+  const msg = logMessages[logIdx % logMessages.length];
+  const col = msg.includes('[WARN]') ? 'var(--amber)' : msg.includes('[ERR]') ? 'var(--red)' : 'rgba(130,170,145,.7)';
+  line.style.cssText = `font-size:9px;color:${col};line-height:1.5;border-bottom:1px solid rgba(57,255,90,.04);padding:1px 0;`;
+  line.textContent = msg;
+  box.appendChild(line);
+  if (box.children.length > 20) box.removeChild(box.firstChild);
+  box.scrollTop = box.scrollHeight;
+  logIdx++;
+}
+setInterval(addLog, 1200);
+addLog(); addLog(); addLog();
+
+/* ── TAKEOFF/LAND ── */
+function demoTakeoff() {
+  if (inAir) {
+    inAir = false;
+    document.getElementById('btn-tko').textContent = 'KALKIŞ';
+    document.getElementById('btn-tko').style.borderColor = 'var(--cyan)';
+    document.getElementById('btn-tko').style.color = 'var(--cyan)';
+    document.getElementById('tb-arm').textContent = 'DISARM';
+    document.getElementById('tb-arm').className = 'tb-cell-val warn';
+    state.aiStatus = 'STANDBY';
+    document.getElementById('tb-ai').textContent = 'STANDBY';
+    document.getElementById('tb-ai').className = 'tb-cell-val';
+  } else {
+    document.getElementById('takeoff-modal').classList.add('open');
+  }
+}
+function closeTkoModal() { document.getElementById('takeoff-modal').classList.remove('open'); }
+function confirmTko() {
+  closeTkoModal();
+  inAir = true;
+  document.getElementById('btn-tko').textContent = 'İNİŞ';
+  document.getElementById('btn-tko').style.borderColor = 'var(--amber)';
+  document.getElementById('btn-tko').style.color = 'var(--amber)';
+  document.getElementById('tb-arm').textContent = 'ARMED';
+  document.getElementById('tb-arm').className = 'tb-cell-val ok';
+  state.aiStatus = 'ACTIVE';
+  document.getElementById('tb-ai').textContent = 'ACTIVE';
+  document.getElementById('tb-ai').className = 'tb-cell-val ok';
+  document.getElementById('bb-status').textContent = 'UÇUŞ AKTİF';
+  document.getElementById('bb-status').style.color = 'var(--accent)';
+}
+function demoSetAlt(v) { document.getElementById('tko-alt').value = v; }
+
+/* ── MODE CHANGE ── */
+function demoModeChange(v) {
+  const labels = { SURVEY:'GÖZETLEME', HOLD:'BEKLE', RTH:'EVE DÖN', INTERCEPT:'ANGAJMAN' };
+  document.getElementById('bottom-mode').textContent = labels[v] || v;
+  if (v === 'INTERCEPT') {
+    document.getElementById('bottom-mode').style.color = 'var(--red)';
+  } else {
+    document.getElementById('bottom-mode').style.color = 'var(--cyan)';
+  }
+}
+
+/* ── ENGAGEMENT ── */
+function demoAbort() {
+  engaged = false;
+  document.querySelector('.abort-btn').classList.remove('show');
+  document.querySelector('.target-pod.locked').classList.remove('locked');
+  document.getElementById('eng-line').style.opacity = '0';
+}
+function demoLock(pod) {
+  document.querySelectorAll('.target-pod').forEach(p=>p.classList.remove('locked'));
+  pod.classList.add('locked');
+  pod.querySelector('.pod-action').textContent = 'KİLİTLİ [İPTAL]';
+  pod.querySelector('.pod-action').style.color = 'var(--red)';
+  engaged = true;
+  document.querySelector('.abort-btn').classList.add('show');
+  document.getElementById('eng-line').style.opacity = '.7';
+}
+
+/* ── CAMERA BUTTONS ── */
+document.querySelectorAll('.tac-btn').forEach(b => {
+  if (['btn-wide','btn-narrow','btn-thermal'].includes(b.id)) {
+    b.addEventListener('click', function() {
+      document.querySelectorAll('#btn-wide,#btn-narrow,#btn-thermal').forEach(x=>x.classList.remove('active'));
+      this.classList.add('active');
+      const names = {wide:'EO-GEN', narrow:'EO-DAR', thermal:'IR-TERMAL'};
+      const id = this.id.replace('btn-','');
+      document.getElementById('hud-fps-label').textContent = names[id] + ' | 25fps';
+    });
+  }
+});
+
+/* ── SETTINGS TABS ── */
+function settingsTab(name, el) {
+  ['drone','cpdd','harita','kamera'].forEach(t => {
+    const tb = document.getElementById('tab-'+t);
+    const btn = document.getElementById('tab-'+t+'-btn');
+    if (tb) tb.style.display = 'none';
+    if (btn) btn.classList.remove('active');
+  });
+  const show = document.getElementById('tab-'+name);
+  if (show) show.style.display = 'flex';
+  if (el) el.classList.add('active');
+}
+
+/* ── CMD FEEDBACK ── */
+function demoSendCmd(cmd) {
+  const st = document.getElementById('bb-status');
+  st.textContent = 'KOMUT: ' + cmd;
+  st.style.color = 'var(--cyan)';
+  setTimeout(()=>{ st.textContent = inAir ? 'UÇUŞ AKTİF' : 'BAĞLANTI BEKLENİYOR...'; st.style.color = inAir ? 'var(--accent)' : 'var(--text3)'; }, 2000);
+}
+</script>
+</body>
+</html>
